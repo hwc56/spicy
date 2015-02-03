@@ -1021,22 +1021,26 @@ static gboolean display_stream_schedule(display_stream *st)
         return TRUE;
     }
 
-    op = spice_msg_in_parsed(in);
-    if (time < op->multi_media_time) {
-        d = op->multi_media_time - time;
-        SPICE_DEBUG("scheduling next stream render in %u ms", d);
-        st->timeout = g_timeout_add(d, (GSourceFunc)display_stream_render, st);
-        return TRUE;
-    } else {
-        SPICE_DEBUG("%s: rendering too late by %u ms (ts: %u, mmtime: %u), dropping ",
-                    __FUNCTION__, time - op->multi_media_time,
-                    op->multi_media_time, time);
-        in = g_queue_pop_head(st->msgq);
-        spice_msg_in_unref(in);
-        st->num_drops_on_playback++;
-        if (g_queue_get_length(st->msgq) == 0)
-            return TRUE;
-    }
+	if(0) {
+		op = spice_msg_in_parsed(in);
+		if (time < op->multi_media_time) {
+			d = op->multi_media_time - time;
+			SPICE_DEBUG("scheduling next stream render in %u ms", d);
+			st->timeout = g_timeout_add(d, (GSourceFunc)display_stream_render, st);
+			return TRUE;
+		} else {
+			SPICE_DEBUG("%s: rendering too late by %u ms (ts: %u, mmtime: %u), dropping ",
+					__FUNCTION__, time - op->multi_media_time,
+					op->multi_media_time, time);
+			in = g_queue_pop_head(st->msgq);
+			spice_msg_in_unref(in);
+			st->num_drops_on_playback++;
+			if (g_queue_get_length(st->msgq) == 0)
+				return TRUE;
+		}
+	}
+
+	display_stream_render(st);
 
     return FALSE;
 }
@@ -1161,15 +1165,17 @@ static gboolean display_stream_render(display_stream *st)
                     dest->bottom - dest->top);
         }
 
-        st->msg_data = NULL;
-        spice_msg_in_unref(in);
+		st->msg_data = NULL;
+		spice_msg_in_unref(in);
 
         in = g_queue_peek_head(st->msgq);
         if (in == NULL)
             break;
 
+#if 0
         if (display_stream_schedule(st))
             return FALSE;
+#endif
     } while (1);
 
     return FALSE;

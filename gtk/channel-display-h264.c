@@ -135,8 +135,6 @@ void stream_h264_init(display_stream *st)
 			PIX_FMT_BGRA, 
 			pad_width, 
 			pad_height);
-
-	st->out_frame = malloc(1920 * 1080 * 4);
 }
 
 G_GNUC_INTERNAL
@@ -156,24 +154,23 @@ void stream_h264_finit(display_stream *st)
 		sws_freeContext(st->sws_ctx);
 		st->sws_ctx = NULL;
 	}
-
-	if(st->out_frame) {
-		free(st->out_frame);
-		st->out_frame = NULL;
-	}
 }
 
 
 G_GNUC_INTERNAL
 void stream_h264_data(display_stream *st)
 {
-	int ret = 0, got_frame = 0;
+	int got_frame = 0;
 	int width, height;
-	uint8_t *dest;
 	uint8_t *data;
+	uint8_t *dest;
 	int size = stream_get_current_frame(st, &data);
 
 	stream_get_dimensions(st, &width, &height);
+	dest = g_malloc0(width * height * 4);
+
+	g_free(st->out_frame);
+	st->out_frame = dest;
 
 	if(st->stream_width != width || st->stream_height != height) {
 		st->stream_width = width;
