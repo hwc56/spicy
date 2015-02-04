@@ -119,7 +119,6 @@ static void spice_display_channel_reset(SpiceChannel *channel, gboolean migratin
 static void spice_display_channel_reset_capabilities(SpiceChannel *channel);
 static void destroy_canvas(display_surface *surface);
 static void _msg_in_unref_func(gpointer data, gpointer user_data);
-static void display_session_mm_time_reset_cb(SpiceSession *session, gpointer data);
 
 /* ------------------------------------------------------------------ */
 
@@ -164,10 +163,6 @@ static void spice_display_channel_constructed(GObject *object)
     g_return_if_fail(c->palettes != NULL);
 
     c->monitors = g_array_new(FALSE, TRUE, sizeof(SpiceDisplayMonitorConfig));
-    spice_g_signal_connect_object(s, "mm-time-reset",
-                                  G_CALLBACK(display_session_mm_time_reset_cb),
-                                  SPICE_CHANNEL(object), 0);
-
 
     if (G_OBJECT_CLASS(spice_display_channel_parent_class)->constructed)
         G_OBJECT_CLASS(spice_display_channel_parent_class)->constructed(object);
@@ -967,6 +962,7 @@ static void display_handle_stream_create(SpiceChannel *channel, SpiceMsgIn *in)
     display_stream *st;
 
     CHANNEL_DEBUG(channel, "%s: id %d", __FUNCTION__, op->id);
+    fprintf(stderr, "%s: id %d", __FUNCTION__, op->id);
 
     if (op->id >= c->nstreams) {
         int n = c->nstreams;
@@ -997,52 +993,9 @@ static void display_handle_stream_create(SpiceChannel *channel, SpiceMsgIn *in)
 
     switch (st->codec) {
     case SPICE_VIDEO_CODEC_TYPE_MJPEG:
-        //stream_mjpeg_init(st);
 		stream_h264_new(st);
         break;
     }
-}
-
-/* coroutine or main context */
-static gboolean display_stream_schedule(display_stream *st)
-{
-    guint32 time, d;
-    SpiceStreamDataHeader *op;
-    SpiceMsgIn *in;
-
-    SPICE_DEBUG("%s", __FUNCTION__);
-    if (st->timeout)
-        return TRUE;
-
-    time = spice_session_get_mm_time(spice_channel_get_session(st->channel));
-    in = g_queue_peek_head(st->msgq);
-
-    if (in == NULL) {
-        return TRUE;
-    }
-
-	if(0) {
-		op = spice_msg_in_parsed(in);
-		if (time < op->multi_media_time) {
-			d = op->multi_media_time - time;
-			SPICE_DEBUG("scheduling next stream render in %u ms", d);
-			st->timeout = g_timeout_add(d, (GSourceFunc)display_stream_render, st);
-			return TRUE;
-		} else {
-			SPICE_DEBUG("%s: rendering too late by %u ms (ts: %u, mmtime: %u), dropping ",
-					__FUNCTION__, time - op->multi_media_time,
-					op->multi_media_time, time);
-			in = g_queue_pop_head(st->msgq);
-			spice_msg_in_unref(in);
-			st->num_drops_on_playback++;
-			if (g_queue_get_length(st->msgq) == 0)
-				return TRUE;
-		}
-	}
-
-	display_stream_render(st);
-
-    return FALSE;
 }
 
 static SpiceRect *stream_get_dest(display_stream *st)
@@ -1125,23 +1078,22 @@ static gboolean display_stream_render(display_stream *st)
         st->msg_data = in;
         switch (st->codec) {
         case SPICE_VIDEO_CODEC_TYPE_MJPEG:
-            //stream_mjpeg_data(st);
 			stream_h264_data(st);
             break;
-        }
+		}
 
-        if (st->out_frame) {
-            int width;
-            int height;
-            SpiceRect *dest;
-            uint8_t *data;
-            int stride;
+		if (st->out_frame) {
+			int width;
+			int height;
+			SpiceRect *dest;
+			uint8_t *data;
+			int stride;
 
-            stream_get_dimensions(st, &width, &height);
-            dest = stream_get_dest(st);
+			stream_get_dimensions(st, &width, &height);
+			dest = stream_get_dest(st);
 
-            data = st->out_frame;
-            stride = width * sizeof(uint32_t);
+			data = st->out_frame;
+			stride = width * sizeof(uint32_t);
 			if(0) {
 				if (!(stream_get_flags(st) & SPICE_STREAM_FLAGS_TOP_DOWN)) {
 					data += stride * (height - 1);
@@ -1149,22 +1101,21 @@ static gboolean display_stream_render(display_stream *st)
 				}
 			}
 
-            st->surface->canvas->ops->put_image(
-                st->surface->canvas,
+			st->surface->canvas->ops->put_image(
+					st->surface->canvas,
 #ifdef G_OS_WIN32
-                SPICE_DISPLAY_CHANNEL(st->channel)->priv->dc,
+					SPICE_DISPLAY_CHANNEL(st->channel)->priv->dc,
 #endif
-                dest, data,
-                width, height, stride,
-                st->have_region ? &st->region : NULL);
+					dest, data,
+					width, height, stride,
+					st->have_region ? &st->region : NULL);
 
-            if (st->surface->primary)
-                g_signal_emit(st->channel, signals[SPICE_DISPLAY_INVALIDATE], 0,
-                    dest->left, dest->top,
-                    dest->right - dest->left,
-                    dest->bottom - dest->top);
-        }
-
+			if (st->surface->primary)
+				g_signal_emit(st->channel, signals[SPICE_DISPLAY_INVALIDATE], 0,
+						dest->left, dest->top,
+						dest->right - dest->left,
+						dest->bottom - dest->top);
+		}
 		st->msg_data = NULL;
 		spice_msg_in_unref(in);
 
@@ -1172,10 +1123,6 @@ static gboolean display_stream_render(display_stream *st)
         if (in == NULL)
             break;
 
-#if 0
-        if (display_stream_schedule(st))
-            return FALSE;
-#endif
     } while (1);
 
     return FALSE;
@@ -1183,73 +1130,6 @@ static gboolean display_stream_render(display_stream *st)
 /* after a sequence of 3 drops, push a report to the server, even
  * if the report window is bigger */
 #define STREAM_REPORT_DROP_SEQ_LEN_LIMIT 3
-
-static void display_update_stream_report(SpiceDisplayChannel *channel, uint32_t stream_id,
-                                         uint32_t frame_time, int32_t latency)
-{
-    display_stream *st = channel->priv->streams[stream_id];
-    guint64 now;
-
-    if (!st->report_is_active) {
-        return;
-    }
-    now = g_get_monotonic_time();
-
-    if (st->report_num_frames == 0) {
-        st->report_start_frame_time = frame_time;
-        st->report_start_time = now;
-    }
-    st->report_num_frames++;
-
-    if (latency < 0) { // drop
-        st->report_num_drops++;
-        st->report_drops_seq_len++;
-    } else {
-        st->report_drops_seq_len = 0;
-    }
-
-    if (st->report_num_frames >= st->report_max_window ||
-        now - st->report_start_time >= st->report_timeout ||
-        st->report_drops_seq_len >= STREAM_REPORT_DROP_SEQ_LEN_LIMIT) {
-        SpiceMsgcDisplayStreamReport report;
-        SpiceSession *session = spice_channel_get_session(SPICE_CHANNEL(channel));
-        SpiceMsgOut *msg;
-
-        report.stream_id = stream_id;
-        report.unique_id = st->report_id;
-        report.start_frame_mm_time = st->report_start_frame_time;
-        report.end_frame_mm_time = frame_time;
-        report.num_frames = st->report_num_frames;
-        report.num_drops = st-> report_num_drops;
-        report.last_frame_delay = latency;
-        if (spice_session_is_playback_active(session)) {
-            report.audio_delay = spice_session_get_playback_latency(session);
-        } else {
-            report.audio_delay = UINT_MAX;
-        }
-
-        msg = spice_msg_out_new(SPICE_CHANNEL(channel), SPICE_MSGC_DISPLAY_STREAM_REPORT);
-        msg->marshallers->msgc_display_stream_report(msg->marshaller, &report);
-        spice_msg_out_send(msg);
-
-        st->report_start_time = 0;
-        st->report_start_frame_time = 0;
-        st->report_num_frames = 0;
-        st->report_num_drops = 0;
-        st->report_drops_seq_len = 0;
-    }
-}
-
-static void display_stream_reset_rendering_timer(display_stream *st)
-{
-    SPICE_DEBUG("%s", __FUNCTION__);
-    if (st->timeout != 0) {
-        g_source_remove(st->timeout);
-        st->timeout = 0;
-    }
-    while (!display_stream_schedule(st)) {
-    }
-}
 
 /*
  * Migration can occur between 2 spice-servers with different mm-times.
@@ -1281,58 +1161,9 @@ static void display_stream_reset_rendering_timer(display_stream *st)
  * the video stream and starts sending stream data
  *
  * display_session_mm_time_reset_cb handles case 1.a, and
- * display_stream_test_frames_mm_time_reset handles case 2.b
  */
 
-/* main context */
-static void display_session_mm_time_reset_cb(SpiceSession *session, gpointer data)
-{
-    SpiceChannel *channel = data;
-    SpiceDisplayChannelPrivate *c = SPICE_DISPLAY_CHANNEL(channel)->priv;
-    guint i;
-
-    CHANNEL_DEBUG(channel, "%s", __FUNCTION__);
-
-    for (i = 0; i < c->nstreams; i++) {
-        display_stream *st;
-
-        if (c->streams[i] == NULL) {
-            continue;
-        }
-        SPICE_DEBUG("%s: stream-id %d", __FUNCTION__, i);
-        st = c->streams[i];
-        display_stream_reset_rendering_timer(st);
-    }
-}
-
 /* coroutine context */
-static void display_stream_test_frames_mm_time_reset(display_stream *st,
-                                                     SpiceMsgIn *new_frame_msg,
-                                                     guint32 mm_time)
-{
-    SpiceStreamDataHeader *tail_op, *new_op;
-    SpiceMsgIn *tail_msg;
-
-    SPICE_DEBUG("%s", __FUNCTION__);
-    g_return_if_fail(new_frame_msg != NULL);
-    tail_msg = g_queue_peek_tail(st->msgq);
-    if (!tail_msg) {
-        return;
-    }
-    tail_op = spice_msg_in_parsed(tail_msg);
-    new_op = spice_msg_in_parsed(new_frame_msg);
-
-    if (new_op->multi_media_time < tail_op->multi_media_time) {
-        SPICE_DEBUG("new-frame-time < tail-frame-time (%u < %u):"
-                    " reseting stream, id %d",
-                    new_op->multi_media_time,
-                    tail_op->multi_media_time,
-                    new_op->id);
-        g_queue_foreach(st->msgq, _msg_in_unref_func, NULL);
-        g_queue_clear(st->msgq);
-        display_stream_reset_rendering_timer(st);
-    }
-}
 
 #define STREAM_PLAYBACK_SYNC_DROP_SEQ_LEN_LIMIT 5
 
@@ -1367,49 +1198,10 @@ static void display_handle_stream_data(SpiceChannel *channel, SpiceMsgIn *in)
     st->num_input_frames++;
 
     latency = op->multi_media_time - mmtime;
-	if(0) {
-		if (latency < 0) {
-			CHANNEL_DEBUG(channel, "stream data too late by %u ms (ts: %u, mmtime: %u), dropin",
-					mmtime - op->multi_media_time, op->multi_media_time, mmtime);
-			st->arrive_late_time += mmtime - op->multi_media_time;
-			st->num_drops_on_arive++;
-
-			if (!st->cur_drops_seq_stats.len) {
-				st->cur_drops_seq_stats.start_mm_time = op->multi_media_time;
-			}
-			st->cur_drops_seq_stats.len++;
-			st->playback_sync_drops_seq_len++;
-		} else {
-			CHANNEL_DEBUG(channel, "video latency: %d", latency);
-			spice_msg_in_ref(in);
-			display_stream_test_frames_mm_time_reset(st, in, mmtime);
-			g_queue_push_tail(st->msgq, in);
-			while (!display_stream_schedule(st)) {
-			}
-			if (st->cur_drops_seq_stats.len) {
-				st->cur_drops_seq_stats.duration = op->multi_media_time -
-					st->cur_drops_seq_stats.start_mm_time;
-				g_array_append_val(st->drops_seqs_stats_arr, st->cur_drops_seq_stats);
-				memset(&st->cur_drops_seq_stats, 0, sizeof(st->cur_drops_seq_stats));
-				st->num_drops_seqs++;
-			}
-			st->playback_sync_drops_seq_len = 0;
-		}
-		if (c->enable_adaptive_streaming) {
-			display_update_stream_report(SPICE_DISPLAY_CHANNEL(channel), op->id,
-					op->multi_media_time, latency);
-			if (st->playback_sync_drops_seq_len >= STREAM_PLAYBACK_SYNC_DROP_SEQ_LEN_LIMIT) {
-				spice_session_sync_playback_latency(spice_channel_get_session(channel));
-				st->playback_sync_drops_seq_len = 0;
-			}
-		}
-	}
 
 	spice_msg_in_ref(in);
-	display_stream_test_frames_mm_time_reset(st, in, mmtime);
 	g_queue_push_tail(st->msgq, in);
-	while (!display_stream_schedule(st)) {
-	}
+	display_stream_render(st);
 }
 
 /* coroutine context */
@@ -1486,7 +1278,6 @@ static void destroy_stream(SpiceChannel *channel, int id)
 
     switch (st->codec) {
     case SPICE_VIDEO_CODEC_TYPE_MJPEG:
-        //stream_mjpeg_cleanup(st);
 		stream_h264_cleanup(st);
         break;
     }
@@ -1523,6 +1314,7 @@ static void display_handle_stream_destroy(SpiceChannel *channel, SpiceMsgIn *in)
 
     g_return_if_fail(op != NULL);
     CHANNEL_DEBUG(channel, "%s: id %d", __FUNCTION__, op->id);
+    fprintf(stderr, "%s: id %d", __FUNCTION__, op->id);
     destroy_stream(channel, op->id);
 }
 

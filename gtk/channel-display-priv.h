@@ -88,9 +88,11 @@ typedef struct display_stream {
 	AVDictionary				*optionsDict;
 	struct SwsContext			*sws_ctx;
 	uint8_t						*buffer;
-	AVFrame						*pFrameRGB;
 	int 						stream_width;
 	int							stream_height;
+	uint8_t 					*dst_data[4];
+	int 						dst_linesize[4];
+	uint8_t						*rgba_buf;
 
     uint8_t                     *out_frame;
     GQueue                      *msgq;

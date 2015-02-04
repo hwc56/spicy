@@ -26,6 +26,8 @@
 
 #include "common/snd_codec.h"
 
+#include "spice-alsaaudio.h"
+
 /**
  * SECTION:channel-playback
  * @short_description: audio stream for playback
@@ -331,11 +333,14 @@ static void playback_handle_data(SpiceChannel *channel, SpiceMsgIn *in)
         }
     }
 
+	alsa_playback((uint32_t *)data, n / 4);
+#if 0
     g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_DATA], 0, data, n);
 
     if ((c->frame_count++ % 100) == 0) {
         g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_GET_DELAY], 0);
     }
+#endif
 }
 
 /* coroutine context */
@@ -381,8 +386,12 @@ static void playback_handle_start(SpiceChannel *channel, SpiceMsgIn *in)
             return;
         }
     }
+
+	alsa_init();
+#if 0
     g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_START], 0,
                             start->format, start->channels, start->frequency);
+#endif
 }
 
 /* coroutine context */
@@ -390,7 +399,8 @@ static void playback_handle_stop(SpiceChannel *channel, SpiceMsgIn *in)
 {
     SpicePlaybackChannelPrivate *c = SPICE_PLAYBACK_CHANNEL(channel)->priv;
 
-    g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_STOP], 0);
+    //g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_STOP], 0);
+	alsa_finit();
     c->is_active = FALSE;
 }
 
