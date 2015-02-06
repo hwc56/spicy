@@ -44,6 +44,7 @@ static int decode_packet(display_stream *st, int *got_frame, int width, int heig
 			st->frame->data[2] += st->frame->linesize[2] * (st->context->height / 2 - 1);    
 			st->frame->linesize[2] *= -1;
 
+			*st->dst_linesize = width*4;
 			sws_scale(
 					st->sws_ctx, 
 					(uint8_t const * const *)st->frame->data,
@@ -53,13 +54,9 @@ static int decode_packet(display_stream *st, int *got_frame, int width, int heig
 					st->dst_data,
 					st->dst_linesize);
 
-			int i;
-			int stride = width * 4;
-			int stride_h264 = width_h264 * 4;
+
 			uint8_t *pp = st->dst_data[0];
-			for (i = 0; i < height; i++) {
-				memcpy(st->out_frame + i*stride, pp + i*stride_h264, stride);
-			}
+			memcpy(st->out_frame, pp, width * height *4);
 		}
 	}
 
@@ -121,8 +118,10 @@ void stream_h264_init(display_stream *st)
 			pad_width, 
 			pad_height, 
 			PIX_FMT_YUV420P,
-			pad_width, 
-			pad_height,
+			//pad_width, 
+			//pad_height,
+			st->stream_width,
+			st->stream_height,
 			PIX_FMT_RGBA, 
 			SWS_BICUBIC,
 			NULL, 

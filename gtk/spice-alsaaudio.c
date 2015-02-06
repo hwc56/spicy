@@ -138,7 +138,6 @@ int alsa_playback(uint32_t *frame, int size)
 {
 	snd_pcm_sframes_t ret = snd_pcm_writei(_pcm, frame, size);
 	if (ret < 0) {
-		fprintf(stderr, "underrun\n");
 		if (ret == -EAGAIN) {
 			return false;
 		}
