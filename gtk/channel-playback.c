@@ -333,8 +333,8 @@ static void playback_handle_data(SpiceChannel *channel, SpiceMsgIn *in)
         }
     }
 
-	alsa_playback((uint32_t *)data, n / 4);
-#if 0
+	//alsa_playback((uint32_t *)data, n / 4);
+#if 1
     g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_DATA], 0, data, n);
 
     if ((c->frame_count++ % 100) == 0) {
@@ -387,8 +387,8 @@ static void playback_handle_start(SpiceChannel *channel, SpiceMsgIn *in)
         }
     }
 
-	alsa_init();
-#if 0
+	//alsa_init();
+#if 1
     g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_START], 0,
                             start->format, start->channels, start->frequency);
 #endif
@@ -399,8 +399,8 @@ static void playback_handle_stop(SpiceChannel *channel, SpiceMsgIn *in)
 {
     SpicePlaybackChannelPrivate *c = SPICE_PLAYBACK_CHANNEL(channel)->priv;
 
-    //g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_STOP], 0);
-	alsa_finit();
+    g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_STOP], 0);
+	//alsa_finit();
     c->is_active = FALSE;
 }
 

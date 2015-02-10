@@ -30,6 +30,8 @@
 #include "spice-session.h"
 #include "spice-util.h"
 
+#include "spice-alsaaudio.h"
+
 #define SPICE_GSTAUDIO_GET_PRIVATE(obj)                                  \
     (G_TYPE_INSTANCE_GET_PRIVATE((obj), SPICE_TYPE_GSTAUDIO, SpiceGstaudioPrivate))
 
@@ -263,13 +265,17 @@ static void playback_stop(SpicePlaybackChannel *channel, gpointer data)
 {
     SpiceGstaudio *gstaudio = data;
     SpiceGstaudioPrivate *p = gstaudio->priv;
+	
+	if(0) {
+		if (p->playback.pipe)
+			gst_element_set_state(p->playback.pipe, GST_STATE_READY);
+		if (p->mmtime_id != 0) {
+			g_source_remove(p->mmtime_id);
+			p->mmtime_id = 0;
+		}
+	}
 
-    if (p->playback.pipe)
-        gst_element_set_state(p->playback.pipe, GST_STATE_READY);
-    if (p->mmtime_id != 0) {
-        g_source_remove(p->mmtime_id);
-        p->mmtime_id = 0;
-    }
+	alsa_finit();
 }
 
 static gboolean update_mmtime_timeout_cb(gpointer data)
@@ -302,47 +308,51 @@ static void playback_start(SpicePlaybackChannel *channel, gint format, gint chan
     g_return_if_fail(p != NULL);
     g_return_if_fail(format == SPICE_AUDIO_FMT_S16);
 
-    if (p->playback.pipe &&
-        (p->playback.rate != frequency ||
-         p->playback.channels != channels)) {
-        playback_stop(channel, data);
-        gst_object_unref(p->playback.pipe);
-        p->playback.pipe = NULL;
-    }
+	if(0) {
+		if (p->playback.pipe &&
+				(p->playback.rate != frequency ||
+				 p->playback.channels != channels)) {
+			playback_stop(channel, data);
+			gst_object_unref(p->playback.pipe);
+			p->playback.pipe = NULL;
+		}
 
-    if (!p->playback.pipe) {
-        GError *error = NULL;
-        gchar *audio_caps =
-            g_strdup_printf("audio/x-raw-int,channels=%d,rate=%d,signed=(boolean)true,"
-                            "width=16,depth=16,endianness=1234", channels, frequency);
-        gchar *pipeline = g_strdup (g_getenv("SPICE_GST_AUDIOSINK"));
-        if (pipeline == NULL)
-            pipeline = g_strdup_printf("appsrc is-live=1 do-timestamp=0 caps=\"%s\" name=\"appsrc\" ! queue ! "
-                                       "audioconvert ! audioresample ! autoaudiosink name=\"audiosink\"", audio_caps);
-        SPICE_DEBUG("audio pipeline: %s", pipeline);
-        p->playback.pipe = gst_parse_launch(pipeline, &error);
-        if (p->playback.pipe == NULL) {
-            g_warning("Failed to create pipeline: %s", error->message);
-            goto lerr;
-        }
-        p->playback.src = gst_bin_get_by_name(GST_BIN(p->playback.pipe), "appsrc");
-        p->playback.sink = gst_bin_get_by_name(GST_BIN(p->playback.pipe), "audiosink");
-        p->playback.rate = frequency;
-        p->playback.channels = channels;
+		if (!p->playback.pipe) {
+			GError *error = NULL;
+			gchar *audio_caps =
+				g_strdup_printf("audio/x-raw-int,channels=%d,rate=%d,signed=(boolean)true,"
+						"width=16,depth=16,endianness=1234", channels, frequency);
+			gchar *pipeline = g_strdup (g_getenv("SPICE_GST_AUDIOSINK"));
+			if (pipeline == NULL)
+				pipeline = g_strdup_printf("appsrc is-live=1 do-timestamp=0 caps=\"%s\" name=\"appsrc\" ! queue ! "
+						"audioconvert ! audioresample ! autoaudiosink name=\"audiosink\"", audio_caps);
+			SPICE_DEBUG("audio pipeline: %s", pipeline);
+			p->playback.pipe = gst_parse_launch(pipeline, &error);
+			if (p->playback.pipe == NULL) {
+				g_warning("Failed to create pipeline: %s", error->message);
+				goto lerr;
+			}
+			p->playback.src = gst_bin_get_by_name(GST_BIN(p->playback.pipe), "appsrc");
+			p->playback.sink = gst_bin_get_by_name(GST_BIN(p->playback.pipe), "audiosink");
+			p->playback.rate = frequency;
+			p->playback.channels = channels;
 
 lerr:
-        g_clear_error(&error);
-        g_free(audio_caps);
-        g_free(pipeline);
-    }
+			g_clear_error(&error);
+			g_free(audio_caps);
+			g_free(pipeline);
+		}
 
-    if (p->playback.pipe)
-        gst_element_set_state(p->playback.pipe, GST_STATE_PLAYING);
+		if (p->playback.pipe)
+			gst_element_set_state(p->playback.pipe, GST_STATE_PLAYING);
 
-    if (p->mmtime_id == 0) {
-        update_mmtime_timeout_cb(gstaudio);
-        p->mmtime_id = g_timeout_add_seconds(1, update_mmtime_timeout_cb, gstaudio);
-    }
+		if (p->mmtime_id == 0) {
+			update_mmtime_timeout_cb(gstaudio);
+			p->mmtime_id = g_timeout_add_seconds(1, update_mmtime_timeout_cb, gstaudio);
+		}
+	}
+
+	alsa_init();
 }
 
 static void playback_data(SpicePlaybackChannel *channel,
@@ -355,9 +365,13 @@ static void playback_data(SpicePlaybackChannel *channel,
 
     g_return_if_fail(p != NULL);
 
-    audio = g_memdup(audio, size); /* TODO: try to avoid memory copy */
-    buf = gst_app_buffer_new(audio, size, g_free, audio);
-    gst_app_src_push_buffer(GST_APP_SRC(p->playback.src), buf);
+	if(0) {
+		audio = g_memdup(audio, size); /* TODO: try to avoid memory copy */
+		buf = gst_app_buffer_new(audio, size, g_free, audio);
+		gst_app_src_push_buffer(GST_APP_SRC(p->playback.src), buf);
+	} else {
+		alsa_playback((uint32_t *)audio, size / 4);
+	}
 }
 
 #define VOLUME_NORMAL 65535
