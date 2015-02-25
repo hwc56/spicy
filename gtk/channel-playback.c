@@ -302,11 +302,23 @@ static void spice_playback_channel_class_init(SpicePlaybackChannelClass *klass)
 
 /* ------------------------------------------------------------------ */
 
+static void two_call_diff(void)
+{
+	static struct timeval s = {0, 0};
+	struct timeval e;
+	gettimeofday(&e, NULL);
+	fprintf(stderr, "two_call_diff: %ld\n", (e.tv_sec * 1000 + e.tv_usec / 1000) - (s.tv_sec * 1000 + s.tv_usec / 1000));
+	s = e;
+}
+
 /* coroutine context */
 static void playback_handle_data(SpiceChannel *channel, SpiceMsgIn *in)
 {
     SpicePlaybackChannelPrivate *c = SPICE_PLAYBACK_CHANNEL(channel)->priv;
     SpiceMsgPlaybackPacket *packet = spice_msg_in_parsed(in);
+
+	if(0)
+		two_call_diff();
 
 #ifdef DEBUG
     CHANNEL_DEBUG(channel, "%s: time %d data %p size %d", __FUNCTION__,
@@ -407,19 +419,19 @@ static void playback_handle_stop(SpiceChannel *channel, SpiceMsgIn *in)
 /* coroutine context */
 static void playback_handle_set_volume(SpiceChannel *channel, SpiceMsgIn *in)
 {
-    SpicePlaybackChannelPrivate *c = SPICE_PLAYBACK_CHANNEL(channel)->priv;
-    SpiceMsgAudioVolume *vol = spice_msg_in_parsed(in);
+	SpicePlaybackChannelPrivate *c = SPICE_PLAYBACK_CHANNEL(channel)->priv;
+	SpiceMsgAudioVolume *vol = spice_msg_in_parsed(in);
 
-    if (vol->nchannels == 0) {
-        g_warning("spice-server send audio-volume-msg with 0 channels");
-        return;
-    }
+	if (vol->nchannels == 0) {
+		g_warning("spice-server send audio-volume-msg with 0 channels");
+		return;
+	}
 
-    g_free(c->volume);
-    c->nchannels = vol->nchannels;
-    c->volume = g_new(guint16, c->nchannels);
-    memcpy(c->volume, vol->volume, sizeof(guint16) * c->nchannels);
-    g_coroutine_object_notify(G_OBJECT(channel), "volume");
+	g_free(c->volume);
+	c->nchannels = vol->nchannels;
+	c->volume = g_new(guint16, c->nchannels);
+	memcpy(c->volume, vol->volume, sizeof(guint16) * c->nchannels);
+	g_coroutine_object_notify(G_OBJECT(channel), "volume");
 }
 
 /* coroutine context */

@@ -21,42 +21,73 @@
 
 #include "channel-display-priv.h"
 
-static int decode_packet(display_stream *st, int *got_frame, int width, int height, int width_h264, int height_h264)
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+static void pgm_save_one_file(uint8_t **data, int *linesize, int xsize, int ysize)
+{
+	int fd = -1;
+	fd = open("/data/dump.yuv", O_RDWR | O_CREAT | O_TRUNC, 0777);
+
+	int i;
+	for (i = 0; i < ysize; i++)
+		write(fd, data[0] + i * linesize[0], xsize); 
+
+	for (i = 0; i < ysize / 2; i++)
+		write(fd, data[1] + i * linesize[1], xsize / 2); 
+
+	for (i = 0; i < ysize / 2; i++)
+		write(fd, data[2] + i * linesize[2], xsize / 2); 
+
+	close(fd);
+}
+
+
+static int decode_packet(display_stream *st, int *got_frame, int width, int height)
 {
     int ret = 0;
     int decoded = st->packet.size;
 
     *got_frame = 0;
 
-    /* decode video frame */
     ret = avcodec_decode_video2(st->context, st->frame, got_frame, &st->packet);
     if (ret < 0) {
         fprintf(stderr, "Error decoding video frame (%s)\n", av_err2str(ret));
         return ret;
     }
 
-	if(1) {
-		if (*got_frame) {
-			st->frame->data[0] += st->frame->linesize[0] * (st->context->height - 1);
-			st->frame->linesize[0] *= -1;    
-			st->frame->data[1] += st->frame->linesize[1] * (st->context->height / 2 - 1);    
-			st->frame->linesize[1] *= -1;    
-			st->frame->data[2] += st->frame->linesize[2] * (st->context->height / 2 - 1);    
-			st->frame->linesize[2] *= -1;
+	static int flag = -1;
+	if(flag == -1) {
+		pgm_save_one_file(st->frame->data, st->frame->linesize, st->frame->linesize[0], height);
+		flag = 1;
+	}
 
-			*st->dst_linesize = width*4;
-			sws_scale(
-					st->sws_ctx, 
-					(uint8_t const * const *)st->frame->data,
-					st->frame->linesize,
-					0,
-					st->context->height,
-					st->dst_data,
-					st->dst_linesize);
+	fprintf(stderr, "%d\n",st->frame->linesize[0]);
 
+	if(st->sws_ctx == NULL) {
+		st->sws_ctx = sws_getContext(
+				st->frame->linesize[0],
+				height + height % 2, 
+				PIX_FMT_YUV420P,
+				st->frame->linesize[0],
+				height + height % 2, 
+				PIX_FMT_RGBA, 
+				SWS_BICUBIC, NULL, NULL, NULL);
 
-			uint8_t *pp = st->dst_data[0];
-			memcpy(st->out_frame, pp, width * height *4);
+		av_image_fill_linesizes(st->dst_linesize, PIX_FMT_RGBA, st->frame->linesize[0]);
+	}
+
+	if (*got_frame) {
+		sws_scale(st->sws_ctx, 
+				(const uint8_t * const*)st->frame->data, st->frame->linesize, 0, height + height % 2, 
+				st->dst_data,
+				st->dst_linesize);
+
+		uint8_t *pp = st->dst_data[0];
+		int  j = 0;
+		for(j = 0; j < height; j++) {
+			memcpy(st->out_frame + j * width * 4, pp + j * st->frame->linesize[0] * 4, width * 4);
 		}
 	}
 
@@ -108,30 +139,31 @@ void stream_h264_init(display_stream *st)
 	int pad_width = st->stream_width;
 	int pad_height = st->stream_height;
 
-	pad_width += pad_width % 2;
+	pad_width += (16 - pad_width % 16);
 	pad_height += pad_height % 2;
 
-	av_image_fill_linesizes(st->dst_linesize, PIX_FMT_RGB32, pad_width);
+	//av_image_fill_linesizes(st->dst_linesize, PIX_FMT_RGBA, st->stream_width);
 
 	st->buffer = (uint8_t *)av_malloc(1920 * 1080 * 4 * sizeof(uint8_t));
+#if 0
 	st->sws_ctx = sws_getContext(
-			pad_width, 
+			pad_width,
 			pad_height, 
 			PIX_FMT_YUV420P,
-			//pad_width, 
-			//pad_height,
 			st->stream_width,
 			st->stream_height,
 			PIX_FMT_RGBA, 
 			SWS_BICUBIC,
-			NULL, 
-			NULL, 
+			NULL,
+			NULL,
 			NULL);
-
+#endif
 	st->dst_data[0] = st->buffer;
 	st->dst_data[1] = NULL;
 	st->dst_data[2] = NULL;
 	st->dst_data[3] = NULL;
+
+	fprintf(stderr, "%d, %d\n", pad_width, pad_height);
 }
 
 G_GNUC_INTERNAL
@@ -169,9 +201,15 @@ void stream_h264_data(display_stream *st)
 		stream_h264_init(st);	
 	}
 
+	static int fd = -1;
+	if(fd == -1) {
+		fd = open("/data/dump.h264", O_RDWR | O_CREAT | O_TRUNC, 0777);
+		write(fd, data, size);
+	}
+
 	av_init_packet(&st->packet);
 	st->packet.data = data;
 	st->packet.size = size;
-	decode_packet(st, &got_frame, width, height, width + width % 2, height + height % 2);
+	decode_packet(st, &got_frame, width, height);
 	av_free_packet(&st->packet);
 }

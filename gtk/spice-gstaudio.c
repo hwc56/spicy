@@ -183,6 +183,7 @@ static gboolean record_bus_cb(GstBus *bus, GstMessage *msg, gpointer data)
 static void record_start(SpiceRecordChannel *channel, gint format, gint channels,
                          gint frequency, gpointer data)
 {
+	fprintf(stderr, "audio record start ! 1 \n");
     SpiceGstaudio *gstaudio = data;
     SpiceGstaudioPrivate *p = gstaudio->priv;
 
@@ -231,6 +232,8 @@ lerr:
         g_free(audio_caps);
         g_free(pipeline);
     }
+
+	fprintf(stderr, "audio record start ! 2 \n");
 
     if (p->record.pipe)
         gst_element_set_state(p->record.pipe, GST_STATE_PLAYING);
@@ -385,29 +388,36 @@ static void playback_volume_changed(GObject *object, GParamSpec *pspec, gpointer
     SpiceGstaudioPrivate *p = gstaudio->priv;
     gdouble vol;
 
-    if (!p->playback.sink)
-        return;
+	if(0) {
+		if (!p->playback.sink)
+			return;
+	}
 
-    g_object_get(object,
+	g_object_get(object,
                  "volume", &volume,
                  "nchannels", &nchannels,
                  NULL);
 
     g_return_if_fail(nchannels > 0);
 
-    vol = 1.0 * volume[0] / VOLUME_NORMAL;
+	if(0) {
+		vol = 1.0 * volume[0] / VOLUME_NORMAL;
 
-    if (GST_IS_BIN(p->playback.sink))
-        e = gst_bin_get_by_interface(GST_BIN(p->playback.sink), GST_TYPE_STREAM_VOLUME);
-    else
-        e = g_object_ref(p->playback.sink);
+		if (GST_IS_BIN(p->playback.sink))
+			e = gst_bin_get_by_interface(GST_BIN(p->playback.sink), GST_TYPE_STREAM_VOLUME);
+		else
+			e = g_object_ref(p->playback.sink);
 
-    if (GST_IS_STREAM_VOLUME(e))
-        gst_stream_volume_set_volume(GST_STREAM_VOLUME(e), GST_STREAM_VOLUME_FORMAT_CUBIC, vol);
-    else
-        g_object_set(e, "volume", vol, NULL);
+		if (GST_IS_STREAM_VOLUME(e))
+			gst_stream_volume_set_volume(GST_STREAM_VOLUME(e), GST_STREAM_VOLUME_FORMAT_CUBIC, vol);
+		else
+			g_object_set(e, "volume", vol, NULL);
 
-    g_object_unref(e);
+		g_object_unref(e);
+	}
+
+	alsa_set_volume(volume[0], volume[1]);
+	fprintf(stderr, "%d, %d\n", volume[0], volume[1]);
 }
 
 static void playback_mute_changed(GObject *object, GParamSpec *pspec, gpointer data)

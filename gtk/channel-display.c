@@ -1094,12 +1094,10 @@ static gboolean display_stream_render(display_stream *st)
 
 			data = st->out_frame;
 			stride = width * sizeof(uint32_t);
-			if(0) {
-				if (!(stream_get_flags(st) & SPICE_STREAM_FLAGS_TOP_DOWN)) {
-					data += stride * (height - 1);
-					stride = -stride;
-				}
-			}
+			if (!(stream_get_flags(st) & SPICE_STREAM_FLAGS_TOP_DOWN)) {
+				data += stride * (height - 1);
+				stride = -stride;
+			}    
 
 			st->surface->canvas->ops->put_image(
 					st->surface->canvas,

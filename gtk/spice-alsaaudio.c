@@ -20,9 +20,7 @@ int alsa_init(void)
 {
 	int err;
 	uint32_t sampels_per_sec = 44100; 
-	uint32_t bits_per_sample = 16;;
 	uint32_t channels = 2;
-	uint32_t signed_or_not = 1;
 
 	const int frame_size = FRAME_SIZE;
 	const char* pcm_device = "default";
@@ -30,9 +28,8 @@ int alsa_init(void)
 	snd_pcm_format_t format;
 	format = SND_PCM_FORMAT_S16_LE;
 
-	int _sampels_per_ms = sampels_per_sec / 1000;
-	if ((err = snd_pcm_open(&_pcm, pcm_device, SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC)) < 0) {
-	//if ((err = snd_pcm_open(&_pcm, pcm_device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
+	//if ((err = snd_pcm_open(&_pcm, pcm_device, SND_PCM_STREAM_PLAYBACK, SND_PCM_ASYNC)) < 0) {
+	if ((err = snd_pcm_open(&_pcm, pcm_device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK)) < 0) {
 		printf("cannot open audio playback device %s %s", pcm_device, snd_strerror(err));
 		return false;
 	}
@@ -149,66 +146,32 @@ int alsa_playback(uint32_t *frame, int size)
 	return true;
 }
 
-#if 0
-int read_exact(int sock, char *buf, int size)
+void alsa_set_volume(long left_vol, long right_vol)
 {
-	int count = 0;
-	int tmp;
+    long min, max;
+    snd_mixer_t* handle;
+    snd_mixer_selem_id_t* sid;
+    const char* card = "default";
+    const char* selem_name = "Master";
 
-	while(count < size)
-	{
-		tmp = read(sock, buf + count, size - count);
-		if(tmp >= 0)
-			count += tmp;
-		else 
-			return -1;
-	}
+    snd_mixer_open(&handle, 0); 
+    snd_mixer_attach(handle, card);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
 
-	return 0;
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_index(sid, 0); 
+    snd_mixer_selem_id_set_name(sid, selem_name);
+    snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+
+    snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+    snd_mixer_selem_set_playback_volume(elem,SND_MIXER_SCHN_REAR_LEFT, left_vol);
+    snd_mixer_selem_set_playback_volume(elem,SND_MIXER_SCHN_SIDE_LEFT, left_vol);
+    snd_mixer_selem_set_playback_volume(elem,SND_MIXER_SCHN_FRONT_LEFT, left_vol);
+
+    snd_mixer_selem_set_playback_volume(elem,SND_MIXER_SCHN_REAR_RIGHT, right_vol);
+    snd_mixer_selem_set_playback_volume(elem,SND_MIXER_SCHN_SIDE_RIGHT, right_vol);
+    snd_mixer_selem_set_playback_volume(elem,SND_MIXER_SCHN_FRONT_RIGHT, right_vol);
+
+    snd_mixer_close(handle);
 }
-
-int main(int argc, char *argv[])
-{
-
-	alsa_init();
-
-	int client_sockfd;
-	int len;
-	struct sockaddr_in remote_addr; 
-	memset(&remote_addr,0,sizeof(remote_addr)); 
-	remote_addr.sin_family=AF_INET; 
-	remote_addr.sin_addr.s_addr=inet_addr("10.3.2.58");
-	remote_addr.sin_port=htons(12306); 
-
-	if((client_sockfd=socket(PF_INET,SOCK_STREAM,0))<0)
-	{
-		perror("socket");
-		return 1;
-	}
-
-
-	if(connect(client_sockfd,(struct sockaddr *)&remote_addr,sizeof(struct sockaddr))<0)
-	{
-		perror("connect");
-		return 1;
-	}
-
-	fprintf(stderr, "connect ok ! \n");
-
-	uint8_t buf[1792];
-	int ret = 0;
-
-	while(1) {
-		ret = read_exact(client_sockfd, buf, 1792);
-		if(ret < 0)
-			break;
-
-		alsa_playback((uint32_t *)buf, 448);
-	}
-
-	close(client_sockfd);
-
-	alsa_finit();
-	return 0;
-}
-#endif
