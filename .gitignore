@@ -41,3 +41,4 @@ po/stamp-it
 spice-common/libtool
 tests/coroutine
 tests/util
+coroutine

@@ -301,24 +301,11 @@ static void spice_playback_channel_class_init(SpicePlaybackChannelClass *klass)
 }
 
 /* ------------------------------------------------------------------ */
-
-static void two_call_diff(void)
-{
-	static struct timeval s = {0, 0};
-	struct timeval e;
-	gettimeofday(&e, NULL);
-	fprintf(stderr, "two_call_diff: %ld\n", (e.tv_sec * 1000 + e.tv_usec / 1000) - (s.tv_sec * 1000 + s.tv_usec / 1000));
-	s = e;
-}
-
 /* coroutine context */
 static void playback_handle_data(SpiceChannel *channel, SpiceMsgIn *in)
 {
     SpicePlaybackChannelPrivate *c = SPICE_PLAYBACK_CHANNEL(channel)->priv;
     SpiceMsgPlaybackPacket *packet = spice_msg_in_parsed(in);
-
-	if(0)
-		two_call_diff();
 
 #ifdef DEBUG
     CHANNEL_DEBUG(channel, "%s: time %d data %p size %d", __FUNCTION__,
@@ -345,14 +332,11 @@ static void playback_handle_data(SpiceChannel *channel, SpiceMsgIn *in)
         }
     }
 
-	//alsa_playback((uint32_t *)data, n / 4);
-#if 1
     g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_DATA], 0, data, n);
 
     if ((c->frame_count++ % 100) == 0) {
         g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_GET_DELAY], 0);
     }
-#endif
 }
 
 /* coroutine context */
@@ -399,11 +383,8 @@ static void playback_handle_start(SpiceChannel *channel, SpiceMsgIn *in)
         }
     }
 
-	//alsa_init();
-#if 1
     g_coroutine_signal_emit(channel, signals[SPICE_PLAYBACK_START], 0,
                             start->format, start->channels, start->frequency);
-#endif
 }
 
 /* coroutine context */

@@ -957,7 +957,6 @@ static void display_update_stream_region(display_stream *st)
 /* coroutine context */
 static void display_handle_stream_create(SpiceChannel *channel, SpiceMsgIn *in)
 {
-	//fprintf(stdout, "%s\n", __FUNCTION__);
     SpiceDisplayChannelPrivate *c = SPICE_DISPLAY_CHANNEL(channel)->priv;
     SpiceMsgDisplayStreamCreate *op = spice_msg_in_parsed(in);
     display_stream *st;
@@ -1308,7 +1307,6 @@ static void clear_streams(SpiceChannel *channel)
 /* coroutine context */
 static void display_handle_stream_destroy(SpiceChannel *channel, SpiceMsgIn *in)
 {
-	//fprintf(stdout, "%s\n", __FUNCTION__);
     SpiceMsgDisplayStreamDestroy *op = spice_msg_in_parsed(in);
 
     g_return_if_fail(op != NULL);
