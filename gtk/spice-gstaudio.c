@@ -183,7 +183,6 @@ static gboolean record_bus_cb(GstBus *bus, GstMessage *msg, gpointer data)
 static void record_start(SpiceRecordChannel *channel, gint format, gint channels,
                          gint frequency, gpointer data)
 {
-	fprintf(stderr, "audio record start ! 1 \n");
     SpiceGstaudio *gstaudio = data;
     SpiceGstaudioPrivate *p = gstaudio->priv;
 
@@ -233,7 +232,6 @@ lerr:
         g_free(pipeline);
     }
 
-	fprintf(stderr, "audio record start ! 2 \n");
 
     if (p->record.pipe)
         gst_element_set_state(p->record.pipe, GST_STATE_PLAYING);
@@ -417,7 +415,6 @@ static void playback_volume_changed(GObject *object, GParamSpec *pspec, gpointer
 	}
 
 	alsa_set_volume(volume[0], volume[1]);
-	fprintf(stderr, "%d, %d\n", volume[0], volume[1]);
 }
 
 static void playback_mute_changed(GObject *object, GParamSpec *pspec, gpointer data)

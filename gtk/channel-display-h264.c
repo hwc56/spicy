@@ -116,7 +116,7 @@ void stream_h264_new(display_stream *st)
 	st->sws_ctx =		NULL;
 	st->buffer =		NULL;
 
-	st->rgba_buf = g_malloc0(1920 * 1080 * 4);
+	st->rgba_buf = NULL;
 }
 
 G_GNUC_INTERNAL
@@ -125,9 +125,6 @@ void stream_h264_cleanup(display_stream *st)
 	stream_h264_finit(st);
 	av_free(st->frame);
 	avcodec_close(st->context);
-
-	if(st->rgba_buf != NULL)
-		free(st->rgba_buf);
 }
 
 G_GNUC_INTERNAL
@@ -148,6 +145,11 @@ void stream_h264_finit(display_stream *st)
 		sws_freeContext(st->sws_ctx);
 		st->sws_ctx = NULL;
 	}
+
+	if(st->rgba_buf != NULL) {
+		free(st->rgba_buf);
+		st->rgba_buf = NULL;
+	}
 }
 
 
@@ -160,16 +162,17 @@ void stream_h264_data(display_stream *st)
 
 	stream_get_dimensions(st, &width, &height);
 
-	st->out_frame = st->rgba_buf;
-
 	if(st->stream_width != width || st->stream_height != height) {
-		fprintf(stderr, "stream size changed\n");
 		st->stream_width = width;
 		st->stream_height = height;
 
 		stream_h264_finit(st);
 		stream_h264_init(st);	
+
+		st->rgba_buf = g_malloc0(st->stream_width * st->stream_height * 4);
 	}
+
+	st->out_frame = st->rgba_buf;
 
 	av_init_packet(&st->packet);
 	st->packet.data = data;
