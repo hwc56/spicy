@@ -87,10 +87,10 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(srcdir)/config.h.in $(srcdir)/spice-client-glib-2.0.pc.in \
 	$(srcdir)/spice-client-gtk-2.0.pc.in \
 	$(srcdir)/spice-client-gtk-3.0.pc.in \
-	$(srcdir)/spice-controller.pc.in AUTHORS COPYING NEWS README \
-	TODO build-aux/ar-lib build-aux/compile build-aux/config.guess \
-	build-aux/config.sub build-aux/depcomp build-aux/install-sh \
-	build-aux/missing build-aux/ltmain.sh \
+	$(srcdir)/spice-controller.pc.in AUTHORS COPYING ChangeLog \
+	NEWS README THANKS TODO build-aux/ar-lib build-aux/compile \
+	build-aux/config.guess build-aux/config.sub build-aux/depcomp \
+	build-aux/install-sh build-aux/missing build-aux/ltmain.sh \
 	$(top_srcdir)/build-aux/ar-lib $(top_srcdir)/build-aux/compile \
 	$(top_srcdir)/build-aux/config.guess \
 	$(top_srcdir)/build-aux/config.sub \
@@ -247,6 +247,8 @@ ACLOCAL = @ACLOCAL@
 ACL_HELPER_DIR = @ACL_HELPER_DIR@
 ACL_LIBS = @ACL_LIBS@
 ALL_LINGUAS = @ALL_LINGUAS@
+ALSA_CFLAGS = @ALSA_CFLAGS@
+ALSA_LIBS = @ALSA_LIBS@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
@@ -276,6 +278,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+FFMPEG_CFLAGS = @FFMPEG_CFLAGS@
+FFMPEG_LIBS = @FFMPEG_LIBS@
 FGREP = @FGREP@
 GETTEXT_PACKAGE = @GETTEXT_PACKAGE@
 GIO_CFLAGS = @GIO_CFLAGS@
@@ -319,14 +323,6 @@ INTLTOOL_V_MERGE = @INTLTOOL_V_MERGE@
 INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
 INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
 INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
-INTROSPECTION_CFLAGS = @INTROSPECTION_CFLAGS@
-INTROSPECTION_COMPILER = @INTROSPECTION_COMPILER@
-INTROSPECTION_GENERATE = @INTROSPECTION_GENERATE@
-INTROSPECTION_GIRDIR = @INTROSPECTION_GIRDIR@
-INTROSPECTION_LIBS = @INTROSPECTION_LIBS@
-INTROSPECTION_MAKEFILE = @INTROSPECTION_MAKEFILE@
-INTROSPECTION_SCANNER = @INTROSPECTION_SCANNER@
-INTROSPECTION_TYPELIBDIR = @INTROSPECTION_TYPELIBDIR@
 JPEG_LIBS = @JPEG_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@

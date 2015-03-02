@@ -209,10 +209,11 @@ am__libspice_client_glib_2_0_la_SOURCES_DIST = bio-gio.c bio-gio.h \
 	spice-channel-priv.h coroutine.h gio-coroutine.c \
 	gio-coroutine.h channel-base.c channel-webdav.c \
 	channel-cursor.c channel-display.c channel-display-priv.h \
-	channel-display-mjpeg.c channel-display-h264.c channel-inputs.c channel-main.c \
-	channel-playback.c channel-playback-priv.h channel-port.c \
-	channel-record.c channel-smartcard.c channel-usbredir.c \
-	channel-usbredir-priv.h smartcard-manager.c \
+	channel-display-mjpeg.c channel-display-h264.c \
+	spice-alsaaudio.h spice-alsaaudio.c channel-inputs.c \
+	channel-main.c channel-playback.c channel-playback-priv.h \
+	channel-port.c channel-record.c channel-smartcard.c \
+	channel-usbredir.c channel-usbredir-priv.h smartcard-manager.c \
 	smartcard-manager-priv.h spice-uri.c spice-uri-priv.h \
 	usb-device-manager.c usb-device-manager-priv.h usbutil.c \
 	usbutil.h usb-acl-helper.c usb-acl-helper.h vmcstream.c \
@@ -240,7 +241,8 @@ am_libspice_client_glib_2_0_la_OBJECTS = bio-gio.lo glib-compat.lo \
 	spice-audio.lo spice-util.lo spice-option.lo spice-client.lo \
 	spice-session.lo spice-channel.lo gio-coroutine.lo \
 	channel-base.lo channel-webdav.lo channel-cursor.lo \
-	channel-display.lo channel-display-mjpeg.lo channel-display-h264.lo channel-inputs.lo \
+	channel-display.lo channel-display-mjpeg.lo \
+	channel-display-h264.lo spice-alsaaudio.lo channel-inputs.lo \
 	channel-main.lo channel-playback.lo channel-port.lo \
 	channel-record.lo channel-smartcard.lo channel-usbredir.lo \
 	smartcard-manager.lo spice-uri.lo usb-device-manager.lo \
@@ -471,6 +473,8 @@ ACLOCAL = @ACLOCAL@
 ACL_HELPER_DIR = @ACL_HELPER_DIR@
 ACL_LIBS = @ACL_LIBS@
 ALL_LINGUAS = @ALL_LINGUAS@
+ALSA_CFLAGS = @ALSA_CFLAGS@
+ALSA_LIBS = @ALSA_LIBS@
 AMTAR = @AMTAR@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
@@ -484,7 +488,7 @@ CATALOGS = @CATALOGS@
 CATOBJEXT = @CATOBJEXT@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
-CFLAGS = @CFLAGS@
+CFLAGS = @CFLAGS@ @FFMPEG_CFLAGS@ @ALSA_CFLAGS@
 COMMON_CFLAGS = @COMMON_CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
@@ -500,6 +504,8 @@ ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
+FFMPEG_CFLAGS = @FFMPEG_CFLAGS@
+FFMPEG_LIBS = @FFMPEG_LIBS@
 FGREP = @FGREP@
 GETTEXT_PACKAGE = @GETTEXT_PACKAGE@
 GIO_CFLAGS = @GIO_CFLAGS@
@@ -543,17 +549,9 @@ INTLTOOL_V_MERGE = @INTLTOOL_V_MERGE@
 INTLTOOL_V_MERGE_OPTIONS = @INTLTOOL_V_MERGE_OPTIONS@
 INTLTOOL__v_MERGE_ = @INTLTOOL__v_MERGE_@
 INTLTOOL__v_MERGE_0 = @INTLTOOL__v_MERGE_0@
-INTROSPECTION_CFLAGS = @INTROSPECTION_CFLAGS@
-INTROSPECTION_COMPILER = @INTROSPECTION_COMPILER@
-INTROSPECTION_GENERATE = @INTROSPECTION_GENERATE@
-INTROSPECTION_GIRDIR = @INTROSPECTION_GIRDIR@
-INTROSPECTION_LIBS = @INTROSPECTION_LIBS@
-INTROSPECTION_MAKEFILE = @INTROSPECTION_MAKEFILE@
-INTROSPECTION_SCANNER = @INTROSPECTION_SCANNER@
-INTROSPECTION_TYPELIBDIR = @INTROSPECTION_TYPELIBDIR@
 JPEG_LIBS = @JPEG_LIBS@
 LD = @LD@
-LDFLAGS = @LDFLAGS@
+LDFLAGS = @LDFLAGS@ @FFMPEG_LIBS@ @ALSA_LIBS@
 LIBM = @LIBM@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -872,10 +870,11 @@ libspice_client_glib_2_0_la_SOURCES = bio-gio.c bio-gio.h \
 	spice-channel-priv.h coroutine.h gio-coroutine.c \
 	gio-coroutine.h channel-base.c channel-webdav.c \
 	channel-cursor.c channel-display.c channel-display-priv.h \
-	channel-display-mjpeg.c channel-display-h264.c channel-inputs.c channel-main.c \
-	channel-playback.c channel-playback-priv.h channel-port.c \
-	channel-record.c channel-smartcard.c channel-usbredir.c \
-	channel-usbredir-priv.h smartcard-manager.c \
+	channel-display-mjpeg.c channel-display-h264.c \
+	spice-alsaaudio.h spice-alsaaudio.c channel-inputs.c \
+	channel-main.c channel-playback.c channel-playback-priv.h \
+	channel-port.c channel-record.c channel-smartcard.c \
+	channel-usbredir.c channel-usbredir-priv.h smartcard-manager.c \
 	smartcard-manager-priv.h spice-uri.c spice-uri-priv.h \
 	usb-device-manager.c usb-device-manager-priv.h usbutil.c \
 	usbutil.h $(USB_ACL_HELPER_SRCS) vmcstream.c vmcstream.h \
@@ -1315,8 +1314,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bio-gio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-base.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-cursor.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-display-mjpeg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-display-h264.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-display-mjpeg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-display.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-inputs.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/channel-main.Plo@am__quote@
@@ -1338,6 +1337,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gio-coroutine.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/glib-compat.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smartcard-manager.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-alsaaudio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-audio.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-channel.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/spice-client.Plo@am__quote@

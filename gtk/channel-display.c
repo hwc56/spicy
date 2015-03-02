@@ -1171,7 +1171,6 @@ static void display_handle_stream_data(SpiceChannel *channel, SpiceMsgIn *in)
     SpiceStreamDataHeader *op = spice_msg_in_parsed(in);
     display_stream *st;
     guint32 mmtime;
-    int32_t latency;
 
     g_return_if_fail(c != NULL);
     g_return_if_fail(c->streams != NULL);
@@ -1193,8 +1192,6 @@ static void display_handle_stream_data(SpiceChannel *channel, SpiceMsgIn *in)
         st->first_frame_mm_time = op->multi_media_time;
     }
     st->num_input_frames++;
-
-    latency = op->multi_media_time - mmtime;
 
 	spice_msg_in_ref(in);
 	g_queue_push_tail(st->msgq, in);
