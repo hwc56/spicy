@@ -1743,7 +1743,8 @@ static void usb_connect_failed(GObject               *object,
 
     dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_ERROR,
                                     GTK_BUTTONS_CLOSE,
-                                    "USB redirection error");
+                                    "USB重定向失败，请尝试重新连接USB设备!");
+                                    //"USB redirection error");
     gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog),
                                              "%s", error->message);
     gtk_dialog_run(GTK_DIALOG(dialog));
