@@ -1184,7 +1184,11 @@ static gboolean key_press_delayed(gpointer data)
 }
 
 static void send_key(SpiceDisplay *display, int scancode, SendKeyType type, gboolean press_delayed)
-{
+{   
+    // Disabled power key --by maben
+    if (scancode == 350)
+        return;
+
     SpiceDisplayPrivate *d = display->priv;
     uint32_t i, b, m;
 
