@@ -83,6 +83,7 @@ enum {
     PROP_HOST,
     PROP_PORT,
     PROP_TLS_PORT,
+    PROP_CPS_MODE,
     PROP_PASSWORD,
     PROP_CA_FILE,
     PROP_CIPHERS,
@@ -218,6 +219,7 @@ spice_session_finalize(GObject *gobject)
     g_free(s->host);
     g_free(s->port);
     g_free(s->tls_port);
+    g_free(s->cps_mode);
     g_free(s->username);
     g_free(s->password);
     g_free(s->ca_file);
@@ -264,7 +266,7 @@ static int spice_uri_create(SpiceSession *session, char *dest, int len)
 static int spice_parse_uri(SpiceSession *session, const char *original_uri)
 {
     SpiceSessionPrivate *s = session->priv;
-    gchar *host = NULL, *port = NULL, *tls_port = NULL, *uri = NULL, *username = NULL, *password = NULL;
+    gchar *host = NULL, *port = NULL, *tls_port = NULL, *cps_mode = NULL, *uri = NULL, *username = NULL, *password = NULL;
     gchar *path = NULL;
     gchar *unescaped_path = NULL;
     gchar *authority = NULL;
@@ -360,7 +362,9 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
             target_key = &port;
         } else if (g_str_equal(key, "tls-port")) {
             target_key = &tls_port;
-        } else if (g_str_equal(key, "password")) {
+        } else if(g_str_equal(key, "cps-mode")){
+	    target_key = &cps_mode;
+	}else if (g_str_equal(key, "password")) {
             target_key = &password;
             g_warning("password may be visible in process listings");
         } else {
@@ -387,11 +391,13 @@ static int spice_parse_uri(SpiceSession *session, const char *original_uri)
     g_free(s->host);
     g_free(s->port);
     g_free(s->tls_port);
+    g_free(s->cps_mode);
     g_free(s->username);
     g_free(s->password);
     s->host = host;
     s->port = port;
     s->tls_port = tls_port;
+    s->cps_mode = cps_mode;
     s->username = username;
     s->password = password;
     return 0;
@@ -402,6 +408,7 @@ fail:
     g_free(host);
     g_free(port);
     g_free(tls_port);
+    g_free(cps_mode);
     g_free(username);
     g_free(password);
     return -1;
@@ -426,6 +433,9 @@ static void spice_session_get_property(GObject    *gobject,
 	break;
     case PROP_TLS_PORT:
         g_value_set_string(value, s->tls_port);
+	break;
+    case PROP_CPS_MODE:
+	g_value_set_string(value, s->cps_mode);
 	break;
     case PROP_USERNAME:
         g_value_set_string(value, s->username);
@@ -540,6 +550,10 @@ static void spice_session_set_property(GObject      *gobject,
         g_free(s->tls_port);
         s->tls_port = g_value_dup_string(value);
         break;
+    case PROP_CPS_MODE:
+	g_free(s->cps_mode);
+	s->cps_mode = g_value_dup_string(value);
+	break;
     case PROP_USERNAME:
         g_free(s->username);
         s->username = g_value_dup_string(value);
@@ -708,6 +722,22 @@ static void spice_session_class_init(SpiceSessionClass *klass)
                              NULL,
                              G_PARAM_READWRITE |
                              G_PARAM_STATIC_STRINGS));
+
+    /**
+     * SpiceSession:cps-mode:
+     *
+     * Compression Mode
+     *
+     * 	
+     **/
+    g_object_class_install_property
+	(gobject_class,PROP_CPS_MODE,
+	 g_param_spec_string("cps-mode",
+			      "CPS Mode",
+			      "Compression Mode",
+				NULL,
+				G_PARAM_READWRITE |
+				G_PARAM_STATIC_STRINGS));  
 
     /**
      * SpiceSession:username:
@@ -1251,6 +1281,7 @@ SpiceSession *spice_session_new_from_session(SpiceSession *session)
 
     g_warn_if_fail(c->host == NULL);
     g_warn_if_fail(c->tls_port == NULL);
+    g_warn_if_fail(c->cps_mode == NULL); 
     g_warn_if_fail(c->username == NULL);
     g_warn_if_fail(c->password == NULL);
     g_warn_if_fail(c->ca_file == NULL);
@@ -1263,6 +1294,7 @@ SpiceSession *spice_session_new_from_session(SpiceSession *session)
     g_object_get(session,
                  "host", &c->host,
                  "tls-port", &c->tls_port,
+		 "cps-mode", &c->cps_mode,
                  "username", &c->username,
                  "password", &c->password,
                  "ca-file", &c->ca_file,

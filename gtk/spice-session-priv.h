@@ -45,6 +45,7 @@ struct _SpiceSessionPrivate {
     char              *host;
     char              *port;
     char              *tls_port;
+    char 	      *cps_mode; 
     char              *username;
     char              *password;
     char              *ca_file;

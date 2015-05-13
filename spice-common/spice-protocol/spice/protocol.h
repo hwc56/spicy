@@ -65,6 +65,7 @@ typedef struct SPICE_ATTR_PACKED SpiceLinkMess {
     uint32_t num_common_caps;
     uint32_t num_channel_caps;
     uint32_t caps_offset;
+    uint32_t compression_mode;
 } SpiceLinkMess;
 
 typedef struct SPICE_ATTR_PACKED SpiceLinkReply {

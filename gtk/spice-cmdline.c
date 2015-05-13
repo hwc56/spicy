@@ -28,6 +28,7 @@ static char *host;
 static char *port;
 static char *tls_port;
 static char *password;
+static char *cps_mode;
 static char *uri;
 
 static GOptionEntry spice_entries[] = {
@@ -59,6 +60,13 @@ static GOptionEntry spice_entries[] = {
         .description      = N_("Spice server secure port"),
         .arg_description  = N_("<port>"),
     },{
+	.long_name	  = "compression-mode",
+	.short_name	  = 'm',
+	.arg		  = G_OPTION_ARG_STRING,
+	.arg_data	  = &cps_mode,
+	.description	  = N_("Compression Mode"),
+	.arg_description  = N_("<mode>"),	
+   },{
         .long_name        = "password",
         .short_name       = 'w',
         .arg              = G_OPTION_ARG_STRING,
@@ -97,4 +105,6 @@ void spice_cmdline_session_setup(SpiceSession *session)
         g_object_set(session, "tls-port", tls_port, NULL);
     if (password)
         g_object_set(session, "password", password, NULL);
+    if(cps_mode)
+	g_object_set(session, "cps-mode", cps_mode, NULL);
 }

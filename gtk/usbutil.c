@@ -37,6 +37,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
+#ifdef __WIN32__
+#include "libwdi.h"
+#endif
+
 #include "usbutil.h"
 #include "spice-util-priv.h"
 
@@ -292,6 +296,32 @@ void spice_usb_util_get_device_strings(int bus, int address,
             break;
         }
     }
+
+#ifdef __WIN32__
+    int r;
+    struct wdi_device_info *wdidev, *wdilist;
+    struct wdi_options_create_list wdi_list_opts;
+    /* find wdi device that matches the libusb device */
+    memset(&wdi_list_opts, 0, sizeof(wdi_list_opts));
+    wdi_list_opts.list_all = 1;
+    wdi_list_opts.list_hubs = 0;
+    wdi_list_opts.trim_whitespaces = 1;
+    r = wdi_create_list(&wdilist, &wdi_list_opts);
+    if(r == 0)
+    {
+		
+	    for (wdidev = wdilist; wdidev != NULL; wdidev = wdidev->next) 
+	    {
+		    if(vendor_id == wdidev->vid && product_id == wdidev->pid)
+		    {
+			    *manufacturer = g_strdup(wdidev->desc);
+			    *product = g_strdup_printf("[%04x:%04x]",wdidev->vid,
+					    wdidev->pid);
+			    break;
+		    }
+	    }
+    }
+#endif
 
     if (!*manufacturer)
         *manufacturer = g_strdup(_("USB"));

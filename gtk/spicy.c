@@ -180,9 +180,10 @@ static struct {
     const char *prop;
     GtkWidget *entry;
 } connect_entries[] = {
-    { .text = N_("Hostname"),   .prop = "host"      },
-    { .text = N_("Port"),       .prop = "port"      },
-    { .text = N_("TLS Port"),   .prop = "tls-port"  },
+    { .text = N_("Hostname"),   	.prop = "host"      },
+    { .text = N_("Port"),       	.prop = "port"      },
+    { .text = N_("TLS Port"),   	.prop = "tls-port"  },
+    { .text = N_("Compression Mode"), 	.prop = "cps-mode"  },
 };
 
 #ifndef G_OS_WIN32
@@ -212,6 +213,10 @@ static void recent_selection_changed_dialog_cb(GtkRecentChooser *chooser, gpoint
 
     g_object_get(session, "tls-port", &txt, NULL);
     gtk_entry_set_text(GTK_ENTRY(connect_entries[2].entry), txt ? txt : "");
+    g_free(txt);
+ 
+    g_object_get(session, "cps-mode", &txt, NULL);
+    gtk_entry_set_text(GTK_ENTRY(connect_entries[3].entry), txt ? txt : "");
     g_free(txt);
 
     gtk_recent_info_unref(info);
@@ -1790,7 +1795,7 @@ int main(int argc, char *argv[])
     GOptionContext *context;
     spice_connection *conn;
     gchar *conf_file, *conf;
-    char *host = NULL, *port = NULL, *tls_port = NULL;
+    char *host = NULL, *port = NULL, *tls_port = NULL, *cps_mode=NULL;
 
 #if !GLIB_CHECK_VERSION(2,31,18)
     g_thread_init(NULL);
@@ -1858,6 +1863,7 @@ int main(int argc, char *argv[])
                  "host", &host,
                  "port", &port,
                  "tls-port", &tls_port,
+		  "cps-mode", &cps_mode,
                  NULL);
     /* If user doesn't provide hostname and port, show the dialog window
        instead of connecting to server automatically */
@@ -1870,7 +1876,7 @@ int main(int argc, char *argv[])
     g_free(host);
     g_free(port);
     g_free(tls_port);
-
+    g_free(cps_mode);
     watch_stdin();
 
     connection_connect(conn);

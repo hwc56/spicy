@@ -1022,6 +1022,22 @@ static int spice_channel_read(SpiceChannel *channel, void *data, size_t length)
     return length;
 }
 
+static uint32_t spice_get_compression_mode(SpiceChannel *channel)
+{
+	SpiceChannelPrivate *c = channel->priv;
+	char * CpsMode_str;
+	uint32_t CpsMode;
+	
+	g_object_get(c->session, "cps-mode", &CpsMode_str, NULL);
+	if(CpsMode_str == NULL){
+		CpsMode = 0;
+	}else{
+		CpsMode = atoi(CpsMode_str);
+	}
+	g_free(CpsMode_str);
+	return CpsMode;
+}
+
 /* coroutine context */
 static void spice_channel_send_spice_ticket(SpiceChannel *channel)
 {
@@ -1139,6 +1155,7 @@ static void spice_channel_send_link(SpiceChannel *channel)
     c->link_msg.connection_id = spice_session_get_connection_id(c->session);
     c->link_msg.channel_type  = c->channel_type;
     c->link_msg.channel_id    = c->channel_id;
+    c->link_msg.compression_mode = spice_get_compression_mode(channel);
     c->link_msg.caps_offset   = sizeof(c->link_msg);
 
     c->link_msg.num_common_caps = c->common_caps->len;
