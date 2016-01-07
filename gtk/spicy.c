@@ -39,7 +39,17 @@
 #include "spice-cmdline.h"
 #include "spice-option.h"
 #include "usb-device-widget.h"
+/************Add By hwc****************/
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <usb.h>
 
+/*************END***************/
 typedef struct spice_connection spice_connection;
 
 enum {
@@ -60,8 +70,8 @@ typedef struct _SpiceWindow SpiceWindow;
 typedef struct _SpiceWindowClass SpiceWindowClass;
 
 struct _SpiceWindow {
-    GObject          object;
-    spice_connection *conn;
+    GObject          object;//tranform data by it
+    spice_connection *conn;//connection  channal
     gint             id;
     gint             monitor_id;
     GtkWidget        *toplevel, *spice;
@@ -72,7 +82,7 @@ struct _SpiceWindow {
     GtkUIManager     *ui;
     bool             fullscreen;
     bool             mouse_grabbed;
-    SpiceChannel     *display_channel;
+    SpiceChannel     *display_channel;//display
 #ifdef G_OS_WIN32
     gint             win_x;
     gint             win_y;
@@ -126,7 +136,14 @@ static GMainLoop     *mainloop = NULL;
 static int           connections = 0;
 static GKeyFile      *keyfile = NULL;
 static SpicePortChannel*stdin_port = NULL;
-
+/*********hwc*******/
+//static  char  *newclient = NULL;
+static  int     isnewclient = -1;
+static    SpiceWindow *win_old = NULL;
+//static    spice_connection  *old_con = NULL;
+//static    SpiceChannel *channel_old = NULL;
+//static    int    old_id,old_monitor_id;
+/*********end*******/
 /* ------------------------------------------------------------------ */
 
 static int ask_user(GtkWidget *parent, char *title, char *message,
@@ -372,6 +389,7 @@ static void update_edit_menu(struct spice_connection *conn)
 
 static void menu_cb_connect(GtkAction *action, void *data)
 {
+    g_message("menu_cb_connect");
     struct spice_connection *conn;
 
     conn = connection_new();
@@ -380,6 +398,7 @@ static void menu_cb_connect(GtkAction *action, void *data)
 
 static void menu_cb_close(GtkAction *action, void *data)
 {
+    g_message("menu_cb_close");
     SpiceWindow *win = data;
 
     connection_disconnect(win->conn);
@@ -387,6 +406,7 @@ static void menu_cb_close(GtkAction *action, void *data)
 
 static void menu_cb_copy(GtkAction *action, void *data)
 {
+    g_message("menu_cb_copy");
     SpiceWindow *win = data;
 
     spice_gtk_session_copy_to_guest(win->conn->gtk_session);
@@ -394,6 +414,7 @@ static void menu_cb_copy(GtkAction *action, void *data)
 
 static void menu_cb_paste(GtkAction *action, void *data)
 {
+    g_message("menu_cb_paste");
     SpiceWindow *win = data;
 
     spice_gtk_session_paste_from_guest(win->conn->gtk_session);
@@ -482,6 +503,7 @@ static void menu_cb_remove_smartcard(GtkAction *action, void *data)
 #ifdef USE_USBREDIR
 static void remove_cb(GtkContainer *container, GtkWidget *widget, void *data)
 {
+    g_message("remove_cb.\n");
     gtk_window_resize(GTK_WINDOW(data), 1, 1);
 }
 
@@ -982,10 +1004,12 @@ spice_window_class_init (SpiceWindowClass *klass)
 static void
 spice_window_init (SpiceWindow *self)
 {
+    g_printf("spice_window_init.\n");
 }
 
 static SpiceWindow *create_spice_window(spice_connection *conn, SpiceChannel *channel, int id, gint monitor_id)
 {
+    g_printf("create_spice_window.\n");
     char title[32];
     SpiceWindow *win;
     GtkAction *toggle;
@@ -994,10 +1018,18 @@ static SpiceWindow *create_spice_window(spice_connection *conn, SpiceChannel *ch
     GError *err = NULL;
     int i;
     SpiceGrabSequence *seq;
+    if(isnewclient != 1)
+    {
+        win = g_object_new(SPICE_TYPE_WINDOW, NULL);
+        win_old = win;
 
-    win = g_object_new(SPICE_TYPE_WINDOW, NULL);
-    win->id = id;
-    win->monitor_id = monitor_id;
+    }
+    else
+    {
+        win = win_old;
+       } 
+    win->id = win_old->id;
+    win->monitor_id = win_old->monitor_id;
     win->conn = conn;
     win->display_channel = channel;
 
@@ -1179,6 +1211,7 @@ static void destroy_spice_window(SpiceWindow *win)
         return;
 
     SPICE_DEBUG("destroy window (#%d:%d)", win->id, win->monitor_id);
+    g_printf("destroy window (#%d:%d)", win->id, win->monitor_id);
     g_object_unref(win->ag);
     g_object_unref(win->ui);
     gtk_widget_destroy(win->toplevel);
@@ -1213,6 +1246,7 @@ static void recent_add(SpiceSession *session)
 static void main_channel_event(SpiceChannel *channel, SpiceChannelEvent event,
                                gpointer data)
 {
+        g_message(" main_channel_event");
     const GError *error = NULL;
     spice_connection *conn = data;
     char password[64];
@@ -1323,6 +1357,7 @@ static void inputs_modifiers(SpiceChannel *channel, gpointer data)
 
 static void display_mark(SpiceChannel *channel, gint mark, SpiceWindow *win)
 {
+    g_message("display_mark.\n");
     g_return_if_fail(win != NULL);
     g_return_if_fail(win->toplevel != NULL);
 
@@ -1335,6 +1370,7 @@ static void display_mark(SpiceChannel *channel, gint mark, SpiceWindow *win)
 
 static void update_auto_usbredir_sensitive(spice_connection *conn)
 {
+    g_message("update_auto_usbredir_sensitive.\n");
 #ifdef USE_USBREDIR
     int i;
     GtkAction *ac;
@@ -1353,6 +1389,7 @@ static void update_auto_usbredir_sensitive(spice_connection *conn)
 
 static SpiceWindow* get_window(spice_connection *conn, int channel_id, int monitor_id)
 {
+    g_message("get_window.\n");
     g_return_val_if_fail(channel_id < CHANNELID_MAX, NULL);
     g_return_val_if_fail(monitor_id < MONITORID_MAX, NULL);
 
@@ -1361,6 +1398,7 @@ static SpiceWindow* get_window(spice_connection *conn, int channel_id, int monit
 
 static void add_window(spice_connection *conn, SpiceWindow *win)
 {
+    g_message("add_window.\n");
     g_return_if_fail(win != NULL);
     g_return_if_fail(win->id < CHANNELID_MAX);
     g_return_if_fail(win->monitor_id < MONITORID_MAX);
@@ -1372,13 +1410,14 @@ static void add_window(spice_connection *conn, SpiceWindow *win)
 
 static void del_window(spice_connection *conn, SpiceWindow *win)
 {
+    g_message("del_window.\n");
     if (win == NULL)
         return;
 
     g_return_if_fail(win->id < CHANNELID_MAX);
     g_return_if_fail(win->monitor_id < MONITORID_MAX);
 
-    g_debug("del display monitor %d:%d", win->id, win->monitor_id);
+    g_printf("==>>==>>==>>==>>del display monitor %d:%d\n", win->id, win->monitor_id);
     conn->wins[win->id * CHANNELID_MAX + win->monitor_id] = NULL;
     if (win->id > 0)
         spice_main_set_display_enabled(conn->main, win->id, FALSE);
@@ -1392,6 +1431,7 @@ static void del_window(spice_connection *conn, SpiceWindow *win)
 static void display_monitors(SpiceChannel *display, GParamSpec *pspec,
                              spice_connection *conn)
 {
+    g_message("display_monitors.\n");
     GArray *monitors = NULL;
     int id;
     guint i;
@@ -1404,16 +1444,18 @@ static void display_monitors(SpiceChannel *display, GParamSpec *pspec,
 
     for (i = 0; i < monitors->len; i++) {
         SpiceWindow *w;
-
+        g_printf("window i:%d id:%d\n",i,id);
         if (!get_window(conn, id, i)) {
             w = create_spice_window(conn, display, id, i);
             add_window(conn, w);
             spice_g_signal_connect_object(display, "display-mark",
                                           G_CALLBACK(display_mark), w, 0);
+            //window_set_fullscreen(w,true);
             gtk_widget_show(w->toplevel);
             update_auto_usbredir_sensitive(conn);
         }
     }
+
 
     for (; i < MONITORID_MAX; i++)
         del_window(conn, get_window(conn, id, i));
@@ -1425,6 +1467,7 @@ static void port_write_cb(GObject *source_object,
                           GAsyncResult *res,
                           gpointer user_data)
 {
+    g_message("++++++++++++++ port_write_cb.\n");
     SpicePortChannel *port = SPICE_PORT_CHANNEL(source_object);
     GError *error = NULL;
 
@@ -1438,6 +1481,7 @@ static void port_flushed_cb(GObject *source_object,
                             GAsyncResult *res,
                             gpointer user_data)
 {
+    g_message("++++++++++++++ port_flushed_cb.\n");
     SpiceChannel *channel = SPICE_CHANNEL(source_object);
     GError *error = NULL;
 
@@ -1510,6 +1554,7 @@ static void port_data(SpicePortChannel *port,
         return;
 
     r = write(fileno(stdout), data, size);
+    g_printf("port_data:%s\n",(char *)data);
     if (r != size) {
         g_warning("port write failed result %d/%d errno %d", r, size, errno);
     }
@@ -1519,13 +1564,15 @@ static void channel_new(SpiceSession *s, SpiceChannel *channel, gpointer data)
 {
     spice_connection *conn = data;
     int id;
-
+    
+    g_message(" channel_new");
     g_object_get(channel, "channel-id", &id, NULL);
     conn->channels++;
     SPICE_DEBUG("new channel (#%d)", id);
 
     if (SPICE_IS_MAIN_CHANNEL(channel)) {
         SPICE_DEBUG("new main channel");
+        g_message("new main channel");
         conn->main = SPICE_MAIN_CHANNEL(channel);
         g_signal_connect(channel, "channel-event",
                          G_CALLBACK(main_channel_event), conn);
@@ -1543,27 +1590,32 @@ static void channel_new(SpiceSession *s, SpiceChannel *channel, gpointer data)
         if (conn->wins[id] != NULL)
             return;
         SPICE_DEBUG("new display channel (#%d)", id);
+        g_printf("new display channel (#%d)\n", id);
         g_signal_connect(channel, "notify::monitors",
-                         G_CALLBACK(display_monitors), conn);
+                         G_CALLBACK(display_monitors), conn);//display notify signals
         spice_channel_connect(channel);
     }
 
     if (SPICE_IS_INPUTS_CHANNEL(channel)) {
         SPICE_DEBUG("new inputs channel");
+        g_printf("new inputs channel.\n");
         g_signal_connect(channel, "inputs-modifiers",
                          G_CALLBACK(inputs_modifiers), conn);
     }
 
     if (SPICE_IS_PLAYBACK_CHANNEL(channel)) {
         SPICE_DEBUG("new audio channel");
+        g_printf("new audio channel.\n");
         conn->audio = spice_audio_get(s, NULL);
     }
 
     if (SPICE_IS_USBREDIR_CHANNEL(channel)) {
+        g_printf("SPICE_IS_USBREDIR_CHANNEL.\n");
         update_auto_usbredir_sensitive(conn);
     }
 
     if (SPICE_IS_PORT_CHANNEL(channel)) {
+        g_printf("SPICE_IS_PORT_CHANNEL.\n");
         g_signal_connect(channel, "notify::port-opened",
                          G_CALLBACK(port_opened), conn);
         g_signal_connect(channel, "port-data",
@@ -1577,6 +1629,7 @@ static void channel_destroy(SpiceSession *s, SpiceChannel *channel, gpointer dat
     spice_connection *conn = data;
     int id;
 
+    g_message(" channel_destroy.");
     g_object_get(channel, "channel-id", &id, NULL);
     if (SPICE_IS_MAIN_CHANNEL(channel)) {
         SPICE_DEBUG("zap main channel");
@@ -1615,6 +1668,7 @@ static void migration_state(GObject *session,
                             GParamSpec *pspec, gpointer data)
 {
     SpiceSessionMigration mig;
+    g_message(" migration_state");
 
     g_object_get(session, "migration-state", &mig, NULL);
     if (mig == SPICE_SESSION_MIGRATION_SWITCHING)
@@ -1626,6 +1680,7 @@ static spice_connection *connection_new(void)
     spice_connection *conn;
     SpiceUsbDeviceManager *manager;
 
+    g_message("connection_new");
     conn = g_new0(spice_connection, 1);
     conn->session = spice_session_new();
     conn->gtk_session = spice_gtk_session_get(conn->session);
@@ -1652,15 +1707,19 @@ static spice_connection *connection_new(void)
 static void connection_connect(spice_connection *conn)
 {
     conn->disconnecting = false;
+    g_message(" connection_connect");
     spice_session_connect(conn->session);
 }
 
 static void connection_disconnect(spice_connection *conn)
 {
+    g_message(" connection_disconnect");
+    #if 1
     if (conn->disconnecting)
         return;
     conn->disconnecting = true;
     spice_session_disconnect(conn->session);
+    #endif
 }
 
 static void connection_destroy(spice_connection *conn)
@@ -1673,6 +1732,7 @@ static void connection_destroy(spice_connection *conn)
     if (connections > 0) {
         return;
     }
+    g_message(" connection_destroy");
 
     g_main_loop_quit(mainloop);
 }
@@ -1779,17 +1839,342 @@ static void setup_terminal(gboolean reset)
 #endif
 }
 
+/**************Add By  hwc*******************/
+#if 0  
+#define SERVER_PORT        "6666"
+#define BUF_SIZE        1024
+#define TIME_OUT_SECONDS        (5)
+
+struct channelfd_s
+{
+    GIOChannel * channel;
+    gint fd;
+    gint timeout;
+    guint recvSourceId;
+    guint bufId;
+    guint timeoutSourceId;
+    //char  buf[BUF_SIZE];
+};
+/*
+   终端需要关闭时释放相关的资源
+ */
+static void freeTerminalData(struct channelfd_s * newTerminal)
+{
+    printf("%s:%p\n", __func__, newTerminal);
+    g_source_remove(newTerminal->recvSourceId);
+    g_source_remove(newTerminal->timeoutSourceId);
+    close(newTerminal->fd);
+    g_io_channel_shutdown(newTerminal->channel, TRUE, NULL);
+    g_io_channel_unref(newTerminal->channel);
+}
+
+/*
+   用来收发数据的socket fd的超时回调函数
+   超时后关闭连接
+ */
+gboolean timeoutCallback(gpointer data)
+{
+    struct channelfd_s * newTerminal;
+
+    newTerminal = (struct channelfd_s *)data;
+
+    newTerminal->timeout++;
+    printf("timeout:%d\n", newTerminal->timeout);
+    if(newTerminal->timeout > TIME_OUT_SECONDS){
+        freeTerminalData(newTerminal);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+gboolean callback1(GIOChannel * source, GIOCondition condition, gpointer data)
+{
+    int retInt;
+    char buf[BUF_SIZE];
+    gsize bytes_read;
+    GIOStatus gIoStatus;
+    gsize offset = 0;
+    gboolean breakFlag = FALSE;
+    struct channelfd_s * newTerminal;
+    memset(buf,0,sizeof(buf));
+    newTerminal = (struct channelfd_s *)data;
+
+    while(1)
+    {
+        gIoStatus = g_io_channel_read_chars(source, buf + offset, 1, &bytes_read, NULL);
+        offset+=1;
+        switch (gIoStatus)
+        {
+            case G_IO_STATUS_ERROR:
+                //出错，关闭连接
+                printf("recv error\n");
+                breakFlag = TRUE;
+                freeTerminalData(newTerminal);
+                break;
+            case G_IO_STATUS_NORMAL:
+                //正常，存储到数据区
+                //printf("recv normal\n");
+                break;
+            case G_IO_STATUS_EOF:
+                //结束，关闭连接
+                printf("recv eof\n");
+                printf("recv:%s\n", buf);
+                freeTerminalData(newTerminal);
+                breakFlag = TRUE;
+                break;
+            case G_IO_STATUS_AGAIN:
+                //重试，什么都不做
+                printf("recv again\n");
+                break;
+            default:
+                break;
+        }
+        if(breakFlag == TRUE)
+            break;
+    }
+    printf("exit func:%s\n", __func__);
+
+        printf("---------------%s\n", buf);
+        char  *ptr = buf;
+        char  *ptr2=NULL,*ptr3=NULL,*ptr1=NULL;
+        
+        char  ip[64],port[10],usb[2048];
+        memset(ip,0,sizeof(ip));
+        memset(port,0,sizeof(port));
+        memset(usb,0,sizeof(usb));
+        int   length=0;
+        ptr1 = strstr(ptr,"+");
+        if(ptr1 != NULL)
+        {
+            ptr2 = strstr(ptr1+1,"+");
+            if(ptr2 != NULL)
+            {
+                ptr3= strstr(ptr2+1,"+");
+                
+                if(strcmp(ptr3+1,"66") == 0)
+                {
+                    length = ptr1 - ptr;
+                    strncpy(ip,ptr,length);
+                    length = ptr2 - ptr1 -1;
+                    strncpy(port,ptr1+1,length);
+                    length = ptr3 - ptr2 -1;
+                    strncpy(usb,ptr2+1,length);
+                }
+            }
+        }
+        g_printf("ip:%s port:%s usb:%s\n",ip,port,usb);
+#if 1
+
+/**************get local usb info************* /
+    char  content[2048];
+    memset(content,0,sizeof(content));
+
+       usb_init();
+       usb_find_busses();
+       usb_find_devices();
+
+       struct  usb_bus *pbus = NULL,*usb_busses=NULL;
+       struct  usb_device  *dev = NULL;
+
+       usb_busses = usb_get_busses();
+        int  c,i,a;
+        char  buffer[2048];
+       for(pbus = usb_busses;pbus != NULL;pbus = pbus->next)
+       {
+           for(dev = pbus->devices;dev != NULL;dev = dev->next)
+           {
+                for(c = 0;c < dev->descriptor.bNumConfigurations;c++)
+                {
+                    for(i=0;i < dev->config[c].bNumInterfaces;i++)
+                    {
+                        for(a=0; a < dev->config[c].interface[i].num_altsetting;a++)
+                        {
+                            if(dev->config[c].interface[i].altsetting[a].bInterfaceClass == 3)
+                            {
+                                memset(buffer,0,sizeof(buffer));
+                                sprintf(buffer,"-1,0x%x,0x%x,-1,0|",dev->descriptor.idVendor,dev->descriptor.idProduct);
+                                g_printf("HID %x:%x\n",dev->descriptor.idVendor,dev->descriptor.idProduct);
+                                strcat(content,buffer);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        strcat(content,usb);
+        g_printf("-------------------(^_^)--------------usbinfo:%s\n",content);
+    
+
+/ **************end*************/
+    /**************transform usb info************* /
+    GOptionContext *context;
+    context = g_option_context_new(content);
+    g_option_context_add_group(context, spice_get_option_group());
+    g_option_context_add_main_entries(context, cmd_entries, NULL);
+    g_option_context_free(context);
+/ ***************************/
+   if(strlen(ip) > 0 && strlen(port) > 0)
+    {
+        isnewclient = 1;
+        struct spice_connection *conn;
+        conn = connection_new();
+        spice_set_session_option(conn->session);
+        //char  *host = "10.100.3.148",*port="8866";
+        g_object_set(conn->session,
+                 "host", ip,
+                 "port", port,
+                 NULL);
+
+        connection_connect(conn);
+        if(win_old->conn)
+        connection_disconnect(win_old->conn);
+        if(win_old->spice)
+        gtk_widget_destroy(win_old->spice);
+        if(win_old->toplevel)
+        gtk_widget_destroy(win_old->toplevel);
+
+
+        isnewclient = -1;
+    }
+    
+#endif
+
+    return TRUE;
+}
+
+
+/*
+   sfd的回调函数
+   如果该函数被调用，说明有新的socket接入
+ */
+static gboolean call_back(GIOChannel * source, GIOCondition condition, gpointer data)
+{
+    struct sockaddr addr;
+    socklen_t addrlen = sizeof(struct sockaddr);
+    struct channelfd_s * newTerminal;
+
+    int listenfd;
+    int connfd;
+
+    //得到用来listen的fd
+    listenfd = g_io_channel_unix_get_fd(source);
+
+    //accept新的socket fd
+    connfd = accept(listenfd, &addr, &addrlen);
+    if(connfd <= 0){
+        perror("accept");
+        return FALSE;
+    }
+    printf("accept success:%d\n", connfd);
+
+    //初始化一个channelfd结构
+    newTerminal = g_new(struct channelfd_s, 1);
+    //超时时间初始化为0
+    newTerminal->timeout = 0;
+
+    newTerminal->fd = connfd;
+    newTerminal->channel = g_io_channel_unix_new(connfd);
+    //设置iochannel的编码为NULL
+    g_io_channel_set_encoding(newTerminal->channel, NULL, NULL);
+
+    //增加对新的socket fd的监视
+    newTerminal->recvSourceId = g_io_add_watch(newTerminal->channel, G_IO_IN, callback1, newTerminal);
+
+    //增加对新的socket fd超时的监视
+    newTerminal->timeoutSourceId = g_timeout_add_seconds(1, timeoutCallback, newTerminal);
+
+    return TRUE;
+}
+/**************END*******************/
+#endif
 static void watch_stdin(void)
 {
     int stdinfd = fileno(stdin);
-    GIOChannel *gin;
+#if 0 
+    /**************Add By  hwc*******************/
+    struct addrinfo hints;
+    struct addrinfo *res, *rp;
+    int retInt;
+    int reuse;
+    int sfd;
+
+    //get socket address information
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = 0;
+    hints.ai_canonname = NULL;
+    hints.ai_addr = NULL;
+    hints.ai_next = NULL;
+
+    retInt = getaddrinfo(NULL, SERVER_PORT, &hints, &res);
+    if(retInt != 0)
+    {
+        printf("getaddrinfo:%s\n", gai_strerror(retInt));
+        return;
+    }
+
+    //get socket & bind
+    for (rp = res; rp != NULL; rp = rp->ai_next)
+    {
+        sfd = socket(rp->ai_family, rp->ai_socktype,
+                rp->ai_protocol);
+        if (sfd < 0)
+            continue;
+
+        //set socket fd reuse
+        reuse = 1;
+        retInt = setsockopt(sfd, SOL_SOCKET, SO_REUSEADDR, &reuse,
+                sizeof(reuse));
+        if (retInt < 0)
+        {
+            perror("setsockopt");
+            return ;
+        }
+
+        if (bind(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
+            break;
+
+        close(sfd);
+    }
+    printf("sfd:%d\n", sfd);
+
+    if (rp == NULL)
+    {
+        printf("could not bind\n");
+        return ;
+    }
+
+    printf("bind success\n");
+    freeaddrinfo(res);
+
+    //listen
+    retInt = listen(sfd, 10);
+    if (retInt < 0)
+    {
+        perror("listen");
+        return;
+    }
+
+
+#endif
+    /**************END*******************/
+    GIOChannel *gin,*socket_server;
 
     setup_terminal(false);
+#if 0
+    /**************Add By  hwc*******************/
+    socket_server = g_io_channel_unix_new(sfd);
+    g_io_channel_set_encoding(socket_server, NULL, NULL);
+    g_io_add_watch(socket_server, G_IO_IN, call_back, NULL);
+#endif
+   /**************END*******************/
     gin = g_io_channel_unix_new(stdinfd);
     g_io_channel_set_flags(gin, G_IO_FLAG_NONBLOCK, NULL);
     g_io_add_watch(gin, G_IO_IN|G_IO_ERR|G_IO_HUP|G_IO_NVAL, input_cb, NULL);
 }
-
 int main(int argc, char *argv[])
 {
     GError *error = NULL;
@@ -1858,8 +2243,8 @@ int main(int argc, char *argv[])
 
     conn = connection_new();
     spice_set_session_option(conn->session);
+#if 1
     spice_cmdline_session_setup(conn->session);
-
     g_object_get(conn->session,
                  "host", &host,
                  "port", &port,
@@ -1878,9 +2263,10 @@ int main(int argc, char *argv[])
     g_free(port);
     g_free(tls_port);
     g_free(cps_mode);
+#endif
     watch_stdin();
-
     connection_connect(conn);
+
     if (connections > 0)
         g_main_loop_run(mainloop);
     g_main_loop_unref(mainloop);
@@ -1897,6 +2283,7 @@ int main(int argc, char *argv[])
     g_key_file_free(keyfile);
 
     g_free(spicy_title);
+    //g_free(newclient);
 
     setup_terminal(true);
     return 0;

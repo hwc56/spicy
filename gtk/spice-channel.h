@@ -76,6 +76,9 @@ struct _SpiceChannelClass
     /* signals, main context */
     void (*channel_event)(SpiceChannel *channel, SpiceChannelEvent event);
     void (*open_fd)(SpiceChannel *channel, int with_tls);
+    /****hwc*** /
+    void (*new_client)(gpointer  data);
+    / ****end***/
 
     /*< private >*/
     /* virtual methods, coroutine context */

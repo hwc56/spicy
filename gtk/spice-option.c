@@ -221,7 +221,7 @@ GOptionGroup* spice_get_option_group(void)
 void spice_set_session_option(SpiceSession *session)
 {
     g_return_if_fail(SPICE_IS_SESSION(session));
-
+    g_message(" spice_set_session_option");
     if (ca_file == NULL) {
         const char *homedir = g_getenv("HOME");
         if (!homedir)

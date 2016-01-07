@@ -51,7 +51,7 @@
     (G_TYPE_INSTANCE_GET_PRIVATE((obj), SPICE_TYPE_MAIN_CHANNEL, SpiceMainChannelPrivate))
 
 #define MAX_DISPLAY 16 /* Note must fit in a guint32, see monitors_align */
-
+extern  char  migrate_host[64],migrate_port[10];
 typedef struct spice_migrate spice_migrate;
 
 #define FILE_XFER_CHUNK_SIZE (VD_AGENT_MAX_DATA_SIZE * 32)
@@ -1943,6 +1943,7 @@ static void main_handle_agent_token(SpiceChannel *channel, SpiceMsgIn *in)
 /* main context */
 static void migrate_channel_new_cb(SpiceSession *s, SpiceChannel *channel, gpointer data)
 {
+    g_warning("############$+--(@_@)-(^_^)-(+_+)==_==######");
     g_signal_connect(channel, "channel-event",
                      G_CALLBACK(migrate_channel_event_cb), data);
 }
@@ -1950,6 +1951,7 @@ static void migrate_channel_new_cb(SpiceSession *s, SpiceChannel *channel, gpoin
 static SpiceChannel* migrate_channel_connect(spice_migrate *mig, int type, int id)
 {
     SPICE_DEBUG("migrate_channel_connect %d:%d", type, id);
+    g_warning("migrate_channel_connect %d:%d", type, id);
 
     SpiceChannel *newc = spice_channel_new(mig->session, type, id);
     spice_channel_connect(newc);
@@ -1962,6 +1964,7 @@ static SpiceChannel* migrate_channel_connect(spice_migrate *mig, int type, int i
 static void spice_main_channel_send_migration_handshake(SpiceChannel *channel)
 {
     SpiceMainChannelPrivate *c = SPICE_MAIN_CHANNEL(channel)->priv;
+    g_warning("#### spice_main_channel_send_migration_handshake--(@_@)-(^_^)-(?_?)######");
 
     if (!spice_channel_test_capability(channel, SPICE_MAIN_CAP_SEAMLESS_MIGRATE)) {
         c->migrate_data->do_seamless = false;
@@ -1990,6 +1993,7 @@ static void migrate_channel_event_cb(SpiceChannel *channel, SpiceChannelEvent ev
     g_signal_handlers_disconnect_by_func(channel, migrate_channel_event_cb, data);
 
     session = spice_channel_get_session(mig->src_channel);
+    g_warning(" migrate_channel_event_cb####--(@_@)-(^_^)-(?_?)######");
 
     switch (event) {
     case SPICE_CHANNEL_OPENED:
@@ -2035,6 +2039,7 @@ static void migrate_channel_event_cb(SpiceChannel *channel, SpiceChannelEvent ev
 /* main context */
 static gboolean main_migrate_handshake_done(gpointer data)
 {
+    g_warning("# main_migrate_handshake_done###--(@_@)-(^_^)-(?_?)######");
     spice_migrate *mig = data;
     SpiceChannelPrivate  *c = SPICE_CHANNEL(mig->dst_channel)->priv;
 
@@ -2067,6 +2072,7 @@ static gboolean migrate_connect(gpointer data)
     const char *host;
     SpiceSession *session;
 
+    g_message(" migrate_connect");
     g_return_val_if_fail(mig != NULL, FALSE);
     g_return_val_if_fail(mig->info != NULL, FALSE);
     g_return_val_if_fail(mig->nchannels == 0, FALSE);
@@ -2082,12 +2088,16 @@ static gboolean migrate_connect(gpointer data)
         OldRedMigrationBegin *info = (OldRedMigrationBegin *)mig->info;
         SPICE_DEBUG("migrate_begin old %s %d %d",
                     info->host, info->port, info->sport);
+        g_warning("##ifc->peer_hdr.major_version == 1################ migrate_begin old %s %d %d",
+                    info->host, info->port, info->sport);
         port = info->port;
         sport = info->sport;
         host = info->host;
     } else {
         SpiceMigrationDstInfo *info = mig->info;
         SPICE_DEBUG("migrate_begin %d %s %d %d",
+                    info->host_size, info->host_data, info->port, info->sport);
+        g_warning("else===>migrate_begin %d %s %d %d",
                     info->host_size, info->host_data, info->port, info->sport);
         port = info->port;
         sport = info->sport;
@@ -2103,11 +2113,14 @@ static gboolean migrate_connect(gpointer data)
                          "verify", SPICE_SESSION_VERIFY_PUBKEY,
                          NULL);
             g_byte_array_unref(pubkey);
+        g_warning("=======>>>>>if ((c->peer_hdr.major_version == 1)");
         } else if (info->cert_subject_size == 0 ||
                    strlen((const char*)info->cert_subject_data) == 0) {
             /* only verify hostname if no cert subject */
             g_object_set(mig->session, "verify", SPICE_SESSION_VERIFY_HOSTNAME, NULL);
+        g_warning("=======>>>>>if (info->cert_subject_size == 0)");
         } else {
+        g_warning("=======>>>>>else");
             gchar *subject = g_alloca(info->cert_subject_size + 1);
             strncpy(subject, (const char*)info->cert_subject_data, info->cert_subject_size);
             subject[info->cert_subject_size] = '\0';
@@ -2119,10 +2132,11 @@ static gboolean migrate_connect(gpointer data)
                          NULL);
         }
     }
-
+    g_printf("@@@@@@@@@@@@@@@@@@%s %d %d\n",host,port,sport);
     if (g_getenv("SPICE_MIG_HOST"))
         host = g_getenv("SPICE_MIG_HOST");
-
+    
+    g_printf("@@@@@@@@@@@@@@@@@@%s %d %d\n",host,port,sport);
     g_object_set(mig->session, "host", host, NULL);
     spice_session_set_port(mig->session, port, FALSE);
     spice_session_set_port(mig->session, sport, TRUE);
@@ -2227,6 +2241,7 @@ static gboolean migrate_delayed(gpointer data)
     SpiceChannel *channel = data;
     SpiceMainChannelPrivate *c = SPICE_MAIN_CHANNEL(channel)->priv;
 
+    g_message(" migrate_delayed");
     g_warn_if_fail(c->migrate_delayed_id != 0);
     c->migrate_delayed_id = 0;
 
@@ -2241,6 +2256,7 @@ static void main_handle_migrate_end(SpiceChannel *channel, SpiceMsgIn *in)
     SpiceMainChannelPrivate *c = SPICE_MAIN_CHANNEL(channel)->priv;
 
     SPICE_DEBUG("migrate end");
+    g_message("migrate end");
 
     g_return_if_fail(c->migrate_delayed_id == 0);
     g_return_if_fail(spice_channel_test_capability(channel, SPICE_MAIN_CAP_SEMI_SEAMLESS_MIGRATE));
@@ -2272,6 +2288,7 @@ static gboolean switch_host_delayed(gpointer data)
 /* coroutine context */
 static void main_handle_migrate_switch_host(SpiceChannel *channel, SpiceMsgIn *in)
 {
+    g_message(" main_handle_migrate_switch_host");
     SpiceMsgMainMigrationSwitchHost *mig = spice_msg_in_parsed(in);
     SpiceSession *session;
     char *host = (char *)mig->host_data;
@@ -2285,9 +2302,9 @@ static void main_handle_migrate_switch_host(SpiceChannel *channel, SpiceMsgIn *i
         g_return_if_fail(subject[mig->cert_subject_size - 1] == '\0');
     }
 
-    SPICE_DEBUG("migrate_switch %s %d %d %s",
+    SPICE_DEBUG("##########     migrate_switch %s %d %d %s    #####",
                 host, mig->port, mig->sport, subject);
-
+    g_message("############    migrate_switch ");
     if (c->switch_host_delayed_id != 0) {
         g_warning("Switching host already in progress, aborting it");
         g_warn_if_fail(g_source_remove(c->switch_host_delayed_id));

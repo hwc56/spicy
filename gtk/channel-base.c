@@ -155,9 +155,10 @@ void spice_channel_handle_migrate(SpiceChannel *channel, SpiceMsgIn *in)
     SpiceMsgIn *data = NULL;
     SpiceMsgMigrate *mig = spice_msg_in_parsed(in);
     SpiceChannelPrivate *c = channel->priv;
-
+    g_message("spice_channel_handle_migrate.\n");
     CHANNEL_DEBUG(channel, "%s: flags %u", __FUNCTION__, mig->flags);
     if (mig->flags & SPICE_MIGRATE_NEED_FLUSH) {
+        g_message("++++++++++++ SPICE_MIGRATE_NEED_FLUSH.\n");
         /* if peer version > 1: pushing the mark msg before all other messgages and sending it,
          * and only it */
         if (c->peer_hdr.major_version == 1) {
@@ -168,6 +169,7 @@ void spice_channel_handle_migrate(SpiceChannel *channel, SpiceMsgIn *in)
         spice_msg_out_send_internal(out);
     }
     if (mig->flags & SPICE_MIGRATE_NEED_DATA_TRANSFER) {
+        g_message("+++++++++++ SPICE_MIGRATE_NEED_DATA_TRANSFER.\n");
         spice_channel_recv_msg(channel, get_msg_handler, &data);
         if (!data) {
             g_critical("expected SPICE_MSG_MIGRATE_DATA, got empty message");

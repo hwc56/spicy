@@ -1265,6 +1265,7 @@ static void spice_session_class_init(SpiceSessionClass *klass)
  **/
 SpiceSession *spice_session_new(void)
 {
+    g_message("spice_session_new");
     return SPICE_SESSION(g_object_new(SPICE_TYPE_SESSION, NULL));
 }
 
@@ -1330,6 +1331,7 @@ SpiceSession *spice_session_new_from_session(SpiceSession *session)
  **/
 gboolean spice_session_connect(SpiceSession *session)
 {
+    g_message(" spice_session_connect---(^_^)");
     SpiceSessionPrivate *s;
 
     g_return_val_if_fail(SPICE_IS_SESSION(session), FALSE);
@@ -1343,6 +1345,7 @@ gboolean spice_session_connect(SpiceSession *session)
     s->client_provided_sockets = FALSE;
 
     g_warn_if_fail(s->cmain == NULL);
+    //create the  main  channel  at  spice_channel_new
     s->cmain = spice_channel_new(session, SPICE_CHANNEL_MAIN, 0);
 
     glz_decoder_window_clear(s->glz_window);
@@ -1405,6 +1408,7 @@ static void cache_clear_all(SpiceSession *self)
 G_GNUC_INTERNAL
 void spice_session_switching_disconnect(SpiceSession *self)
 {
+    g_message(" spice_session_switching_disconnect(^_^)");
     SpiceSessionPrivate *s = self->priv;
     struct channel *item;
     RingItem *ring, *next;
@@ -1425,7 +1429,7 @@ void spice_session_switching_disconnect(SpiceSession *self)
 
     cache_clear_all(self);
 }
-
+/*this is beginning to migrating*/
 G_GNUC_INTERNAL
 void spice_session_set_migration(SpiceSession *session,
                                  SpiceSession *migration,
@@ -1455,6 +1459,8 @@ void spice_session_set_migration(SpiceSession *session,
     s->tls_port = m->tls_port;
     m->tls_port = tmp;
 
+    g_message(" spice_session_set_migration");
+    SPICE_DEBUG("open host %s:%s  sport:%s", s->host, s->port,s->tls_port);
     g_warn_if_fail(ring_get_length(&s->channels) == ring_get_length(&m->channels));
 
     SPICE_DEBUG("migration channels left:%d (in migration:%d)",
@@ -1492,6 +1498,7 @@ SpiceChannel* spice_session_lookup_channel(SpiceSession *session, gint id, gint 
 G_GNUC_INTERNAL
 void spice_session_abort_migration(SpiceSession *session)
 {
+    g_message("spice_session_abort_migration(^_^)");
     SpiceSessionPrivate *s = session->priv;
     RingItem *ring, *next;
     struct channel *c;
@@ -1530,10 +1537,11 @@ void spice_session_abort_migration(SpiceSession *session)
 G_GNUC_INTERNAL
 void spice_session_channel_migrate(SpiceSession *session, SpiceChannel *channel)
 {
+    g_message("spice_session_channel_migrate(^_^)");
     SpiceSessionPrivate *s = session->priv;
     SpiceChannel *c;
     gint id, type;
-
+    g_message(" spice_session_channel_migrate");
     g_return_if_fail(s != NULL);
     g_return_if_fail(s->migration != NULL);
     g_return_if_fail(SPICE_IS_CHANNEL(channel));
@@ -1563,6 +1571,7 @@ void spice_session_channel_migrate(SpiceSession *session, SpiceChannel *channel)
 /* main context */
 static gboolean after_main_init(gpointer data)
 {
+    g_message("after_main_init(^_^)");
     SpiceSession *self = data;
     SpiceSessionPrivate *s = self->priv;
     GList *l;
@@ -1584,6 +1593,7 @@ static gboolean after_main_init(gpointer data)
 G_GNUC_INTERNAL
 gboolean spice_session_migrate_after_main_init(SpiceSession *self)
 {
+    g_message("spice_session_migrate_after_main_init(^_^)");
     SpiceSessionPrivate *s = self->priv;
 
     if (!s->migrate_wait_init)
@@ -1602,6 +1612,7 @@ gboolean spice_session_migrate_after_main_init(SpiceSession *self)
 G_GNUC_INTERNAL
 void spice_session_migrate_end(SpiceSession *self)
 {
+    g_message("  spice_session_migrate_end---(^_^)");
     SpiceSessionPrivate *s = self->priv;
     SpiceMsgOut *out;
     GList *l;
@@ -1676,6 +1687,7 @@ void spice_session_disconnect(SpiceSession *session)
     s->disconnecting = TRUE;
     s->cmain = NULL;
 
+    g_message(" spice_session_disconnect---(^_^)");
     for (ring = ring_get_head(&s->channels); ring != NULL; ring = next) {
         next = ring_next(&s->channels, ring);
         item = SPICE_CONTAINEROF(ring, struct channel, link);
@@ -1795,6 +1807,7 @@ end:
 /* main context */
 static void open_host_connectable_connect(spice_open_host *open_host, GSocketConnectable *connectable)
 {
+    g_message("  open_host_connectable_connect (^_^)");
     SPICE_DEBUG("connecting %p...", open_host);
 
     g_socket_client_connect_async(open_host->client, connectable,

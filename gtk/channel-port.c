@@ -213,6 +213,7 @@ static void port_set_opened(SpicePortChannel *self, gboolean opened)
 /* coroutine context */
 static void port_handle_init(SpiceChannel *channel, SpiceMsgIn *in)
 {
+    g_message("++++++++++++++ port_handle_init.\n");
     SpicePortChannel *self = SPICE_PORT_CHANNEL(channel);
     SpicePortChannelPrivate *c = self->priv;
     SpiceMsgPortInit *init = spice_msg_in_parsed(in);
@@ -233,6 +234,7 @@ static void port_handle_init(SpiceChannel *channel, SpiceMsgIn *in)
 /* coroutine context */
 static void port_handle_event(SpiceChannel *channel, SpiceMsgIn *in)
 {
+    g_message("++++++++++++++ port_handle_event.\n");
     SpicePortChannel *self = SPICE_PORT_CHANNEL(channel);
     SpiceMsgPortEvent *event = spice_msg_in_parsed(in);
 
@@ -252,6 +254,7 @@ static void port_handle_event(SpiceChannel *channel, SpiceMsgIn *in)
 /* coroutine context */
 static void port_handle_msg(SpiceChannel *channel, SpiceMsgIn *in)
 {
+    g_message("++++++++++++++ port_handle_msg.\n");
     SpicePortChannel *self = SPICE_PORT_CHANNEL(channel);
     int size;
     uint8_t *buf;
@@ -285,6 +288,7 @@ void spice_port_write_async(SpicePortChannel *self,
                             GAsyncReadyCallback callback,
                             gpointer user_data)
 {
+    g_message("++++++++++++++ spice_port_write_async.\n");
     SpicePortChannelPrivate *c;
 
     g_return_if_fail(SPICE_IS_PORT_CHANNEL(self));
@@ -317,6 +321,7 @@ void spice_port_write_async(SpicePortChannel *self,
 gssize spice_port_write_finish(SpicePortChannel *self,
                                GAsyncResult *result, GError **error)
 {
+    g_message("++++++++++++++ spice_port_write_finish.\n");
     g_return_val_if_fail(SPICE_IS_PORT_CHANNEL(self), -1);
 
     return spice_vmc_write_finish(SPICE_CHANNEL(self), result, error);
@@ -343,6 +348,7 @@ void spice_port_event(SpicePortChannel *self, guint8 event)
     g_return_if_fail(SPICE_IS_PORT_CHANNEL(self));
     g_return_if_fail(event > SPICE_PORT_EVENT_CLOSED);
 
+    g_message("++++++++++++++ spice_port_event.\n");
     msg = spice_msg_out_new(SPICE_CHANNEL(self), SPICE_MSGC_PORT_EVENT);
     e.event = event;
     msg->marshallers->msgc_port_event(msg->marshaller, &e);

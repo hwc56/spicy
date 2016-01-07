@@ -94,7 +94,8 @@ GOptionGroup *spice_cmdline_get_option_group(void)
 void spice_cmdline_session_setup(SpiceSession *session)
 {
     g_return_if_fail(SPICE_IS_SESSION(session));
-
+    
+    g_message(" spice_cmdline_session_setup");
     if (uri)
         g_object_set(session, "uri", uri, NULL);
     if (host)
@@ -107,4 +108,5 @@ void spice_cmdline_session_setup(SpiceSession *session)
         g_object_set(session, "password", password, NULL);
     if(cps_mode)
 	g_object_set(session, "cps-mode", cps_mode, NULL);
+    g_printf("uri:%s  host:%s  port:%s  tls-port:%s  password:%s  cps-mode:%s\n",uri,host,port,tls_port,password,cps_mode);
 }

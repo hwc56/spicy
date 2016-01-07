@@ -192,6 +192,7 @@ static void guest_modifiers_changed(SpiceInputsChannel *inputs, gpointer data)
 
 static void spice_gtk_session_init(SpiceGtkSession *self)
 {
+    g_message("++++++++++++++spice_gtk_session_init.\n");
     SpiceGtkSessionPrivate *s;
     GdkKeymap *keymap = gdk_keymap_get_default();
 
@@ -212,6 +213,7 @@ spice_gtk_session_constructor(GType                  gtype,
                               guint                  n_properties,
                               GObjectConstructParam *properties)
 {
+    g_message("++++++++++++++spice_gtk_session_constructor.\n");
     GObject *obj;
     SpiceGtkSession *self;
     SpiceGtkSessionPrivate *s;
@@ -707,6 +709,7 @@ static void clipboard_get(GtkClipboard *clipboard,
                           GtkSelectionData *selection_data,
                           guint info, gpointer user_data)
 {
+    g_message("++++++++++ clipboard_get.\n");
     g_return_if_fail(SPICE_IS_GTK_SESSION(user_data));
 
     RunInfo ri = { NULL, };
@@ -1081,6 +1084,7 @@ SpiceGtkSession *spice_gtk_session_get(SpiceSession *session)
     SpiceGtkSession *self;
     static GStaticMutex mutex = G_STATIC_MUTEX_INIT;
 
+    g_message("spice_gtk_session_get");
     g_static_mutex_lock(&mutex);
     self = session->priv->gtk_session;
     if (self == NULL) {
